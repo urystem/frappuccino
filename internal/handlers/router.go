@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"cafeteria/internal/handlers/middleware"
 	"database/sql"
 	"log/slog"
 	"net/http"
@@ -26,7 +25,11 @@ func NewAPIServer(address string, db *sql.DB, logger *slog.Logger) *APIServer {
 func Routes() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", middleware.Middleware(http.NotFoundHandler().ServeHTTP))
+	mux.HandleFunc("/", http.NotFoundHandler().ServeHTTP)
 
 	return mux
+}
+
+func (s *APIServer) Run() {
+
 }

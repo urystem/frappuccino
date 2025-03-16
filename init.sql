@@ -1,0 +1,1 @@
+CREATE TYPE sex AS ENUM ('man', 'woman')
