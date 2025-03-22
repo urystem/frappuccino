@@ -31,10 +31,31 @@ type OrderItems struct {
 type OrderStatus int
 
 const (
-	Created OrderStatus = iota
-	Pending
-	Processing
-	Completed
-	Canceled
-	Rejected
+	OrderPending OrderStatus = iota
+	OrderProcessing
+	OrderCompleted
+	OrderCancelled
 )
+
+func (s OrderStatus) String() string {
+	switch s {
+	case OrderPending:
+		return "pending"
+	case OrderProcessing:
+		return "processing"
+	case OrderCompleted:
+		return "completed"
+	case OrderCancelled:
+		return "cancelled"
+	default:
+		return "unknown"
+	}
+}
+
+func (s OrderStatus) IsValid() bool {
+	switch s {
+	case OrderPending, OrderProcessing, OrderCompleted, OrderCancelled:
+		return true
+	}
+	return false
+}

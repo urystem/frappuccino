@@ -96,14 +96,19 @@ func (h *UserHandler) AddUser(w http.ResponseWriter, r *http.Request) {
 	allergensList := strings.Split(allergens, ",") // Convert the comma-separated allergens into a list
 
 	// Convert sex to []uint8 (if needed)
-	sex := []uint8(sexStr)
+	sex, err := strconv.Atoi(sexStr)
+	if err != nil {
+		h.Logger.Error(fmt.Sprintf("invalid age: %v", err))
+		helpers.WriteError(w, http.StatusBadRequest, fmt.Errorf("age must be a valid integer"))
+		return
+	}
 
 	user := &models.User{
 		Username:  username,
 		Password:  password, // Use the provided password
 		Age:       age,
 		IsAdmin:   isAdmin,
-		Sex:       sex,
+		Sex:       models.Sex(sex),
 		Allergens: allergensList, // Store allergens as a list
 	}
 
