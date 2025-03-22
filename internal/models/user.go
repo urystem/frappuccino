@@ -37,3 +37,11 @@ func (s Sex) String() string {
 		return "unknown"
 	}
 }
+
+func (s Sex) IsValid() bool {
+	switch s {
+	case male, female, undefined:
+		return true
+	}
+	return false
+}

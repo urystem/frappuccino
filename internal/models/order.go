@@ -32,21 +32,27 @@ type OrderStatus int
 
 const (
 	OrderPending OrderStatus = iota
-	OrderProcessing
+	OrderConfirmed
+	OrderInProgress
 	OrderCompleted
 	OrderCancelled
+	OrderRefused
 )
 
 func (s OrderStatus) String() string {
 	switch s {
 	case OrderPending:
 		return "pending"
-	case OrderProcessing:
-		return "processing"
+	case OrderConfirmed:
+		return "confirmed"
+	case OrderInProgress:
+		return "in progress"
 	case OrderCompleted:
 		return "completed"
 	case OrderCancelled:
 		return "cancelled"
+	case OrderRefused:
+		return "refused"
 	default:
 		return "unknown"
 	}
@@ -54,7 +60,7 @@ func (s OrderStatus) String() string {
 
 func (s OrderStatus) IsValid() bool {
 	switch s {
-	case OrderPending, OrderProcessing, OrderCompleted, OrderCancelled:
+	case OrderPending, OrderConfirmed, OrderInProgress, OrderCompleted, OrderCancelled, OrderRefused:
 		return true
 	}
 	return false
