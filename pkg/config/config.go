@@ -27,7 +27,7 @@ var (
 func LoadConfig() *Config {
 	cfg.DBHost = getEnv("DB_HOST", "localhost")
 	cfg.DBUser = getEnv("DB_USER", "postgres")
-	cfg.DBPassword = getEnv("DB_PASSWORD", "Nasmeshka01!")
+	cfg.DBPassword = getEnv("DB_PASSWORD", "postgres")
 	cfg.DBName = getEnv("DB_NAME", "cafeteria")
 	cfg.DBPort = getEnv("DB_PORT", "5432")
 	cfg.JWTSecret = createMd5Hash(getEnv("JWT_SECRET", "not-so-secret-now-is-it?"))

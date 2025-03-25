@@ -1,10 +1,10 @@
 package models
 
 type Inventory struct {
-	InventoryId   int     `json:"inventory_id"`
-	InventoryName string  `json:"inventory_name"`
-	Quantity      float64 `json:"quantity"`
-	Unit          string  `json:"unit"`
+	InventoryId int     `json:"inventory_id"`
+	Name        string  `json:"inventory_name"`
+	Quantity    float64 `json:"quantity"`
+	Unit        string  `json:"unit"`
 }
 
 type InventoryTransactions struct {

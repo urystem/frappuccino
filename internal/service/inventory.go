@@ -61,7 +61,7 @@ func (s *InventoryService) Delete(ctx context.Context, InventoryId int) error {
 }
 
 func (s *InventoryService) Post(ctx context.Context, item models.Inventory) error {
-	if item.InventoryName == "" || item.Quantity < 0 {
+	if item.Name == "" || item.Quantity < 0 {
 		err := errors.New("invalid item data")
 		return err
 	}

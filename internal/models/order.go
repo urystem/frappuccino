@@ -36,7 +36,7 @@ const (
 	OrderInProgress
 	OrderCompleted
 	OrderCancelled
-	OrderRefused
+	OrderRejected
 )
 
 func (s OrderStatus) String() string {
@@ -51,8 +51,8 @@ func (s OrderStatus) String() string {
 		return "completed"
 	case OrderCancelled:
 		return "cancelled"
-	case OrderRefused:
-		return "refused"
+	case OrderRejected:
+		return "rejected"
 	default:
 		return "unknown"
 	}
@@ -60,7 +60,7 @@ func (s OrderStatus) String() string {
 
 func (s OrderStatus) IsValid() bool {
 	switch s {
-	case OrderPending, OrderConfirmed, OrderInProgress, OrderCompleted, OrderCancelled, OrderRefused:
+	case OrderPending, OrderConfirmed, OrderInProgress, OrderCompleted, OrderCancelled, OrderRejected:
 		return true
 	}
 	return false

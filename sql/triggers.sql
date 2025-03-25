@@ -8,7 +8,7 @@ BEGIN
     FOR required_quantity, available_quantity IN
         SELECT mi.quantity, ii.quantity
         FROM menu_item_ingredients mi
-        JOIN inventory_item ii ON mi.inventory_item_id = ii.inventory_item_id
+        JOIN inventory_items ii ON mi.inventory_item_id = ii.inventory_item_id
         WHERE mi.menu_item_id = NEW.menu_item_id
     LOOP
         -- If there's not enough stock, cancel the order

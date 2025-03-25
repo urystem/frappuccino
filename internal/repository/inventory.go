@@ -32,7 +32,7 @@ func (r *InventoryRepository) GetAll(ctx context.Context) ([]models.Inventory, e
 	var inventoryItems []models.Inventory
 	for rows.Next() {
 		var inventory models.Inventory
-		err := rows.Scan(&inventory.InventoryId, &inventory.InventoryName, &inventory.Quantity, &inventory.Unit)
+		err := rows.Scan(&inventory.InventoryId, &inventory.Name, &inventory.Quantity, &inventory.Unit)
 		if err != nil {
 			return nil, err
 		}
@@ -54,7 +54,7 @@ func (r *InventoryRepository) GetElementById(ctx context.Context, inventoryId in
 
 	var inventory models.Inventory
 	err := r.Db.QueryRowContext(ctx, query, inventoryId).
-		Scan(&inventory.InventoryId, &inventory.InventoryName, &inventory.Quantity, &inventory.Unit)
+		Scan(&inventory.InventoryId, &inventory.Name, &inventory.Quantity, &inventory.Unit)
 
 	if err != nil {
 		return models.Inventory{}, err
@@ -77,7 +77,7 @@ func (r *InventoryRepository) Put(ctx context.Context, item models.Inventory) er
 	}
 	defer stmt.Close()
 
-	res, err := stmt.ExecContext(ctx, item.InventoryName, item.Quantity, item.Unit, item.InventoryId)
+	res, err := stmt.ExecContext(ctx, item.Name, item.Quantity, item.Unit, item.InventoryId)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func (r *InventoryRepository) Post(ctx context.Context, item models.Inventory) e
 		INSERT INTO inventory_items (inventory_name, quantity, unit) 
 		VALUES ($1, $2, $3)`
 
-	_, err := r.Db.ExecContext(ctx, query, item.InventoryName, item.Quantity, item.Unit)
+	_, err := r.Db.ExecContext(ctx, query, item.Name, item.Quantity, item.Unit)
 	if err != nil {
 		return err
 	}
