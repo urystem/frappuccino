@@ -27,8 +27,8 @@ var (
 func LoadConfig() *Config {
 	cfg.DBHost = getEnv("DB_HOST", "localhost")
 	cfg.DBUser = getEnv("DB_USER", "postgres")
-	cfg.DBPassword = getEnv("DB_PASSWORD", "0000")
-	cfg.DBName = getEnv("DB_NAME", "frappuccino_db")
+	cfg.DBPassword = getEnv("DB_PASSWORD", "Nasmeshka01!")
+	cfg.DBName = getEnv("DB_NAME", "cafeteria")
 	cfg.DBPort = getEnv("DB_PORT", "5432")
 	cfg.JWTSecret = createMd5Hash(getEnv("JWT_SECRET", "not-so-secret-now-is-it?"))
 	// cfg.RedisURI = getEnv("REDIS_URI", "redis:6379")

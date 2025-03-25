@@ -1,20 +1,15 @@
 package helpers
 
 import (
-	"cafeteria/internal/models"
 	"crypto/md5"
+	"database/sql/driver"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"io"
 )
 
-func IsValid(t models.TransactionType) bool {
-	switch t {
-	case 0, 1, 2:
-		return true
-	default:
-		return false
-	}
-}
+type JSONB map[string]any
 
 func CreateMd5Hash(text string) string {
 	hasher := md5.New()
@@ -24,4 +19,16 @@ func CreateMd5Hash(text string) string {
 	}
 
 	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func (j JSONB) Value() (driver.Value, error) {
+	return json.Marshal(j)
+}
+
+func (j *JSONB) Scan(value any) error {
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+	return json.Unmarshal(b, &j)
 }

@@ -26,3 +26,21 @@ CREATE TRIGGER enforce_inventory_check
 BEFORE INSERT ON order_items
 FOR EACH ROW
 EXECUTE FUNCTION check_inventory_before_order();
+
+
+CREATE OR REPLACE FUNCTION check_inventory_exists()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM inventory_items WHERE inventory_name = NEW.inventory_name
+    ) THEN
+        RAISE EXCEPTION 'Inventory item "%" already exists', NEW.inventory_name;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER before_inventory_insert
+BEFORE INSERT ON inventory_items
+FOR EACH ROW
+EXECUTE FUNCTION check_inventory_exists();

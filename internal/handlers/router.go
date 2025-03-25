@@ -85,8 +85,6 @@ func (s *APIServer) Run() {
 	// #######################
 	//httpLayer := handlers.NewHandler(serviceLayer, s.logger)
 
-	s.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("templates"))))
-
 	s.logger.Info("API server listening on " + s.address)
 	log.Fatal(http.ListenAndServe(s.address, s.mux))
 }

@@ -38,14 +38,6 @@ func (s *InventoryService) GetElementById(ctx context.Context, InventoryId int) 
 	return item, nil
 }
 
-func (s *InventoryService) Delete(ctx context.Context, InventoryId int) error {
-	err := s.Repo.Delete(ctx, InventoryId)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (s *InventoryService) Put(ctx context.Context, item models.Inventory) error {
 	if item.InventoryId <= 0 {
 		err := errors.New("invalid item ID")
@@ -57,6 +49,14 @@ func (s *InventoryService) Put(ctx context.Context, item models.Inventory) error
 		return err
 	}
 
+	return nil
+}
+
+func (s *InventoryService) Delete(ctx context.Context, InventoryId int) error {
+	err := s.Repo.Delete(ctx, InventoryId)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
