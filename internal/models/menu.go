@@ -1,29 +1,31 @@
 package models
 
-type Menu struct {
-	MenuID      int    `json:"menu_id"`
-	CategoryID  int    `json:"category_id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Price       int    `json:"price"`
+import (
+	"time"
+
+	"github.com/lib/pq"
+)
+
+type MenuItem struct {
+	ID          int                  `json:"id"`
+	Name        string               `json:"name"`
+	Description string               `json:"description"`
+	Price       float64              `json:"price"`
+	Allergens   pq.StringArray       `json:"allergens"`
+	Ingredients []MenuItemIngredient `json:"ingredients"`
 }
 
-type Category struct {
-	CategoryID  int    `json:"category_id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-type MenuItemsIngredients struct {
-	MenuId       int `json:"menu_id"`
-	IngredientID int `json:"ingredient_id"`
-	Quantity     int `json:"quantity"`
+type MenuItemIngredient struct {
+	ID              int `json:"id"`
+	MenuItemID      int `json:"menu_item_id"`
+	InventoryItemID int `json:"inventory_item_id"`
+	Quantity        int `json:"quantity"`
 }
 
 type PriceHistory struct {
-	PriceHistoryID int `json:"price_history_id"`
-	MenuID         int `json:"menu_id"`
-	OldPrice       int `json:"old_price"`
-	NewPrice       int `json:"new_price"`
-	ChangeDate     int `json:"change_date"`
+	ID         int       `json:"id"`
+	MenuItemID int       `json:"menu_item_id"`
+	OldPrice   float64   `json:"old_price"`
+	NewPrice   float64   `json:"new_price"`
+	ChangedAt  time.Time `json:"changed_at"`
 }

@@ -4,8 +4,6 @@ import (
 	"cafeteria/internal/models"
 	"context"
 	"database/sql"
-	"errors"
-	"fmt"
 )
 
 type InventoryRepository struct {
@@ -18,114 +16,87 @@ func NewInventoryRepository(db *sql.DB) *InventoryRepository {
 	}
 }
 
-func (r *InventoryRepository) GetAll(ctx context.Context) ([]models.Inventory, error) {
-	query := `
-		SELECT *
-		FROM inventory_items`
-
-	rows, err := r.Db.QueryContext(ctx, query)
+// Get all inventory items
+func (r *InventoryRepository) GetAll(ctx context.Context) ([]*models.InventoryItem, error) {
+	rows, err := r.Db.QueryContext(ctx, "SELECT * FROM inventory_items")
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var inventoryItems []models.Inventory
+	inventory := make([]*models.InventoryItem, 0)
 	for rows.Next() {
-		var inventory models.Inventory
-		err := rows.Scan(&inventory.InventoryId, &inventory.Name, &inventory.Quantity, &inventory.Unit)
+		p, err := scanRowsIntoProduct(rows)
 		if err != nil {
 			return nil, err
 		}
-		inventoryItems = append(inventoryItems, inventory)
-	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return inventoryItems, nil
-}
-
-func (r *InventoryRepository) GetElementById(ctx context.Context, inventoryId int) (models.Inventory, error) {
-	query := `
-		SELECT *
-		FROM inventory_items
-		WHERE inventory_item_id = $1`
-
-	var inventory models.Inventory
-	err := r.Db.QueryRowContext(ctx, query, inventoryId).
-		Scan(&inventory.InventoryId, &inventory.Name, &inventory.Quantity, &inventory.Unit)
-
-	if err != nil {
-		return models.Inventory{}, err
+		inventory = append(inventory, p)
 	}
 
 	return inventory, nil
 }
 
-func (r *InventoryRepository) Put(ctx context.Context, item models.Inventory) error {
-	// const op = "repository.inventory.Put"
-
-	query := `
-		UPDATE inventory_items
-		SET inventory_name = $1, quantity = $2, unit = $3
-		WHERE inventory_item_id = $4`
-
-	stmt, err := r.Db.PrepareContext(ctx, query)
+func (r *InventoryRepository) GetByID(ctx context.Context, id int) (*models.InventoryItem, error) {
+	rows, err := r.Db.QueryContext(ctx, "SELECT * FROM inventory_items WHERE inventory_item_id = $1", id)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer stmt.Close()
+	defer rows.Close()
 
-	res, err := stmt.ExecContext(ctx, item.Name, item.Quantity, item.Unit, item.InventoryId)
-	if err != nil {
-		return err
+	if !rows.Next() {
+		return nil, sql.ErrNoRows
 	}
 
-	rowsAffected, err := res.RowsAffected()
+	item, err := scanRowsIntoProduct(rows)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if rowsAffected == 0 {
-		message := fmt.Sprintf("update failed, inventory item with ID %v does not exist", item.InventoryId)
-		return errors.New(message)
+	return item, nil
+}
+
+// Delete an inventory item
+func (r *InventoryRepository) Delete(ctx context.Context, id int) error {
+	_, err := r.Db.ExecContext(ctx, "DELETE FROM inventory_items WHERE inventory_item_id = $1", id)
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (r *InventoryRepository) Delete(ctx context.Context, inventoryId int) error {
-	query := `
-		DELETE FROM inventory_items
-		WHERE inventory_item_id = $1`
-
-	res, err := r.Db.ExecContext(ctx, query, inventoryId)
+// Update an inventory item
+func (r *InventoryRepository) Update(ctx context.Context, item *models.InventoryItem) error {
+	_, err := r.Db.ExecContext(ctx, "UPDATE inventory_items SET name=$1, quantity=$2, unit=$3, allergens=$4, extra_info=$5 where inventory_item_id=$6", item.Name, item.Quantity, item.Unit, item.Allergens, item.ExtraInfo, item.ID)
 	if err != nil {
 		return err
 	}
-
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rowsAffected == 0 {
-		message := fmt.Sprintf("deletion was not successful, inventory item with ID %v does not exist", inventoryId)
-		return errors.New(message)
-	}
-
 	return nil
 }
 
-func (r *InventoryRepository) Post(ctx context.Context, item models.Inventory) error {
-	query := `
-		INSERT INTO inventory_items (inventory_name, quantity, unit) 
-		VALUES ($1, $2, $3)`
-
-	_, err := r.Db.ExecContext(ctx, query, item.Name, item.Quantity, item.Unit)
+// Insert a new inventory item
+func (r *InventoryRepository) Insert(ctx context.Context, item *models.InventoryItem) error {
+	_, err := r.Db.ExecContext(ctx, "INSERT INTO inventory_items (name, quantity, unit, allergens, extra_info) VALUES ($1, $2, $3, $4, $5)", item.Name, item.Quantity, item.Unit, item.Allergens, item.ExtraInfo)
 	if err != nil {
 		return err
 	}
-
 	return nil
+}
+
+func scanRowsIntoProduct(rows *sql.Rows) (*models.InventoryItem, error) {
+	inventory := new(models.InventoryItem)
+
+	err := rows.Scan(
+		&inventory.ID,
+		&inventory.Name,
+		&inventory.Quantity,
+		&inventory.Unit,
+		&inventory.Allergens,
+		&inventory.ExtraInfo,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return inventory, nil
 }

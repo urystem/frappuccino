@@ -3,15 +3,14 @@ package service
 import (
 	"cafeteria/internal/models"
 	"context"
-	"errors"
 )
 
 type InventoryRepository interface {
-	GetAll(ctx context.Context) ([]models.Inventory, error)
-	GetElementById(ctx context.Context, InventoryId int) (models.Inventory, error)
-	Delete(ctx context.Context, InventoryId int) error
-	Put(ctx context.Context, item models.Inventory) error
-	Post(ctx context.Context, item models.Inventory) error
+	GetAll(ctx context.Context) ([]*models.InventoryItem, error)
+	GetByID(ctx context.Context, id int) (*models.InventoryItem, error)
+	Delete(ctx context.Context, id int) error
+	Update(ctx context.Context, item *models.InventoryItem) error
+	Insert(ctx context.Context, item *models.InventoryItem) error
 }
 
 type InventoryService struct {
@@ -22,54 +21,39 @@ func NewInventoryService(repo InventoryRepository) *InventoryService {
 	return &InventoryService{Repo: repo}
 }
 
-func (s *InventoryService) GetAll(ctx context.Context) ([]models.Inventory, error) {
-	items, err := s.Repo.GetAll(ctx)
+func (s *InventoryService) GetAll(ctx context.Context) ([]*models.InventoryItem, error) {
+	inventory, err := s.Repo.GetAll(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return items, nil
+	return inventory, nil
 }
 
-func (s *InventoryService) GetElementById(ctx context.Context, InventoryId int) (models.Inventory, error) {
-	item, err := s.Repo.GetElementById(ctx, InventoryId)
+func (s *InventoryService) GetByID(ctx context.Context, id int) (*models.InventoryItem, error) {
+	inventory, err := s.Repo.GetByID(ctx, id)
 	if err != nil {
-		return models.Inventory{}, err
+		return nil, err
 	}
-	return item, nil
+	return inventory, nil
 }
 
-func (s *InventoryService) Put(ctx context.Context, item models.Inventory) error {
-	if item.InventoryId <= 0 {
-		err := errors.New("invalid item ID")
-		return err
-	}
-
-	err := s.Repo.Put(ctx, item)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *InventoryService) Delete(ctx context.Context, InventoryId int) error {
-	err := s.Repo.Delete(ctx, InventoryId)
-	if err != nil {
+func (s *InventoryService) Delete(ctx context.Context, id int) error {
+	if err := s.Repo.Delete(ctx, id); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *InventoryService) Post(ctx context.Context, item models.Inventory) error {
-	if item.Name == "" || item.Quantity < 0 {
-		err := errors.New("invalid item data")
+func (s *InventoryService) Update(ctx context.Context, item *models.InventoryItem) error {
+	if err := s.Repo.Update(ctx, item); err != nil {
 		return err
 	}
+	return nil
+}
 
-	err := s.Repo.Post(ctx, item)
-	if err != nil {
+func (s *InventoryService) Insert(ctx context.Context, item *models.InventoryItem) error {
+	if err := s.Repo.Insert(ctx, item); err != nil {
 		return err
 	}
-
 	return nil
 }
