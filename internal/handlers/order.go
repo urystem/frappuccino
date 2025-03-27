@@ -11,11 +11,11 @@ import (
 )
 
 type OrderService interface {
-	GetAll(ctx context.Context) ([]*models.OrderItem, error)
-	GetByID(ctx context.Context, id int) (*models.OrderItem, error)
+	GetAll(ctx context.Context) ([]*models.Order, error)
+	GetByID(ctx context.Context, id int) (*models.Order, error)
 	Delete(ctx context.Context, id int) error
-	Update(ctx context.Context, order *models.OrderItem) error
-	Insert(ctx context.Context, order *models.OrderItem) error
+	Update(ctx context.Context, order *models.Order) error
+	Insert(ctx context.Context, order *models.Order) error
 }
 
 type OrderHandler struct {
@@ -86,19 +86,12 @@ func (h *OrderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OrderHandler) Update(w http.ResponseWriter, r *http.Request) {
-	order := new(models.OrderItem)
+	order := new(models.Order)
 	if err := ParseJSON(r, order); err != nil {
 		h.Logger.Error("Failed parsing JSON for an order: ", "error", err)
 		WriteError(w, http.StatusBadRequest, fmt.Errorf("incorrect JSON format"), "something went wrong")
 		return
 	}
-
-	if err := order.IsValid(); err != nil {
-		h.Logger.Error("Invalid order data: ", "error", err)
-		WriteError(w, http.StatusBadRequest, err, "something went wrong")
-		return
-	}
-
 	if err := h.Service.Update(r.Context(), order); err != nil {
 		h.Logger.Error("Failed to update an order: ", "error", err)
 		WriteError(w, http.StatusBadRequest, fmt.Errorf("no such order"), "something went wrong")
@@ -109,16 +102,10 @@ func (h *OrderHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OrderHandler) Insert(w http.ResponseWriter, r *http.Request) {
-	order := new(models.OrderItem)
+	order := new(models.Order)
 	if err := ParseJSON(r, order); err != nil {
 		h.Logger.Error("Failed parsing JSON for an order: ", "error", err)
 		WriteError(w, http.StatusBadRequest, fmt.Errorf("incorrect JSON format"), "something went wrong")
-		return
-	}
-
-	if err := order.IsValid(); err != nil {
-		h.Logger.Error("Invalid order data: ", "error", err)
-		WriteError(w, http.StatusBadRequest, err, "something went wrong")
 		return
 	}
 

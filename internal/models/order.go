@@ -46,7 +46,7 @@ func (s OrderStatus) IsValid() bool {
 type Order struct {
 	ID           int         `json:"id"`
 	CustomerName string      `json:"customer_name"`
-	Status       OrderStatus `json:"status"`
+	Status       string      `json:"status"`
 	Total        float64     `json:"total"`
 	CreatedAt    time.Time   `json:"created_at"`
 	UpdatedAt    time.Time   `json:"updated_at"`
