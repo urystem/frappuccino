@@ -44,6 +44,7 @@ func (s *APIServer) Run() {
 	inventoryRepository := repository.NewInventoryRepository(s.db)
 	menuRepository := repository.NewMenuRepository(s.db)
 	orderRepository := repository.NewOrderRepository(s.db)
+	transactionRepository := repository.NewTransactionRepository(s.db)
 
 	// #######################
 	// Business Layer
@@ -51,6 +52,7 @@ func (s *APIServer) Run() {
 	inventoryService := service.NewInventoryService(inventoryRepository)
 	menuService := service.NewMenuService(menuRepository)
 	orderService := service.NewOrderService(orderRepository)
+	transactionService := service.NewTransactionService(transactionRepository)
 
 	// #######################
 	// Presentation Layer
@@ -58,6 +60,7 @@ func (s *APIServer) Run() {
 	inventoryHandler := NewInventoryHandler(inventoryService, s.logger)
 	menuHandler := NewMenuHandler(menuService, s.logger)
 	orderHandler := NewOrderHandler(orderService, s.logger)
+	transactionHandler := NewTransactionHandler(transactionService, s.logger)
 
 	// #######################
 	// Registering Endpoints
@@ -65,6 +68,7 @@ func (s *APIServer) Run() {
 	inventoryHandler.RegisterEndpoints(s.mux)
 	menuHandler.RegisterEndpoints(s.mux)
 	orderHandler.RegisterEndpoints(s.mux)
+	transactionHandler.RegisterEndpoints(s.mux)
 
 	// #######################
 	// Repository Layer

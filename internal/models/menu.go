@@ -27,8 +27,8 @@ type MenuItemIngredient struct {
 type PriceHistory struct {
 	ID         int       `json:"id"`
 	MenuItemID int       `json:"menu_item_id"`
-	OldPrice   float64   `json:"old_price"`
-	NewPrice   float64   `json:"new_price"`
+	OldPrice   float32   `json:"old_price"`
+	NewPrice   float32   `json:"new_price"`
 	ChangedAt  time.Time `json:"changed_at"`
 }
 

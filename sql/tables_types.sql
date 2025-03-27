@@ -6,7 +6,7 @@ CREATE TABLE orders (
     order_id SERIAL PRIMARY KEY,
     customer_name TEXT NOT NULL,
     status order_status NOT NULL DEFAULT 'pending',
-    total INTEGER NOT NULL
+    total REAL NOT NULL
 );
 
 -- Menu Items Table (Added allergens array and JSONB details)

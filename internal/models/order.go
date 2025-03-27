@@ -47,7 +47,7 @@ type Order struct {
 	ID           int         `json:"id"`
 	CustomerName string      `json:"customer_name"`
 	Status       string      `json:"status"`
-	Total        float64     `json:"total"`
+	Total        float32     `json:"total"`
 	CreatedAt    time.Time   `json:"created_at"`
 	UpdatedAt    time.Time   `json:"updated_at"`
 	Items        []OrderItem `json:"items"`
