@@ -29,19 +29,10 @@ func NewInventoryHandler(service InventoryService, logger *slog.Logger) *Invento
 
 func (h *InventoryHandler) RegisterEndpoints(mux *http.ServeMux) {
 	mux.HandleFunc("POST /inventory", middleware.Middleware(h.Insert))
-	mux.HandleFunc("POST /inventory/", middleware.Middleware(h.Insert))
-
 	mux.HandleFunc("GET /inventory", middleware.Middleware(h.GetAll))
-	mux.HandleFunc("GET /inventory/", middleware.Middleware(h.GetAll))
-
 	mux.HandleFunc("GET /inventory/{id}", middleware.Middleware(h.GetElementById))
-	mux.HandleFunc("GET /inventory/{id}/", middleware.Middleware(h.GetElementById))
-
 	mux.HandleFunc("PUT /inventory", middleware.Middleware(h.Update))
-	mux.HandleFunc("PUT /inventory/", middleware.Middleware(h.Update))
-
 	mux.HandleFunc("DELETE /inventory/{id}", middleware.Middleware(h.Delete))
-	mux.HandleFunc("DELETE /inventory/{id}/", middleware.Middleware(h.Delete))
 }
 
 func (h *InventoryHandler) GetAll(w http.ResponseWriter, r *http.Request) {

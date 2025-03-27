@@ -5,6 +5,7 @@ import (
 	"context"
 )
 
+// InventoryRepository defines database operations related to inventory.
 type InventoryRepository interface {
 	GetAll(ctx context.Context) ([]*models.InventoryItem, error)
 	GetByID(ctx context.Context, id int) (*models.InventoryItem, error)
@@ -13,47 +14,38 @@ type InventoryRepository interface {
 	Insert(ctx context.Context, item *models.InventoryItem) error
 }
 
+// InventoryService provides business logic for managing inventory.
 type InventoryService struct {
 	Repo InventoryRepository
 }
 
+// NewInventoryService initializes a new inventory service.
 func NewInventoryService(repo InventoryRepository) *InventoryService {
 	return &InventoryService{Repo: repo}
 }
 
 func (s *InventoryService) GetAll(ctx context.Context) ([]*models.InventoryItem, error) {
-	inventory, err := s.Repo.GetAll(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return inventory, nil
+	return s.Repo.GetAll(ctx)
 }
 
 func (s *InventoryService) GetByID(ctx context.Context, id int) (*models.InventoryItem, error) {
-	inventory, err := s.Repo.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return inventory, nil
+	return s.Repo.GetByID(ctx, id)
 }
 
 func (s *InventoryService) Delete(ctx context.Context, id int) error {
-	if err := s.Repo.Delete(ctx, id); err != nil {
-		return err
-	}
-	return nil
+	return s.Repo.Delete(ctx, id)
 }
 
 func (s *InventoryService) Update(ctx context.Context, item *models.InventoryItem) error {
-	if err := s.Repo.Update(ctx, item); err != nil {
+	if err := item.IsValid(); err != nil {
 		return err
 	}
-	return nil
+	return s.Repo.Update(ctx, item)
 }
 
 func (s *InventoryService) Insert(ctx context.Context, item *models.InventoryItem) error {
-	if err := s.Repo.Insert(ctx, item); err != nil {
+	if err := item.IsValid(); err != nil {
 		return err
 	}
-	return nil
+	return s.Repo.Insert(ctx, item)
 }

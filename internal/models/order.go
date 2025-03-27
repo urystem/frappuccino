@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type OrderStatus int
 
@@ -40,6 +43,16 @@ func (s OrderStatus) IsValid() bool {
 	return false
 }
 
+type Order struct {
+	ID           int         `json:"id"`
+	CustomerName string      `json:"customer_name"`
+	Status       OrderStatus `json:"status"`
+	Total        float64     `json:"total"`
+	CreatedAt    time.Time   `json:"created_at"`
+	UpdatedAt    time.Time   `json:"updated_at"`
+	Items        []OrderItem `json:"items"`
+}
+
 type OrderItem struct {
 	ID         int `json:"id"`
 	OrderID    int `json:"order_id"`
@@ -52,4 +65,11 @@ type OrderStatusHistory struct {
 	OrderID   int         `json:"order_id"`
 	Status    OrderStatus `json:"status"`
 	UpdatedAt time.Time   `json:"updated_at"`
+}
+
+func (o *OrderItem) IsValid() error {
+	if o.Quantity <= 0 {
+		return errors.New("quantity must be greater than zero")
+	}
+	return nil
 }

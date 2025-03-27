@@ -12,7 +12,7 @@ CREATE TABLE orders (
 -- Menu Items Table (Added allergens array and JSONB details)
 CREATE TABLE menu_items (
     menu_item_id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
     description TEXT NOT NULL,
     details JSONB, -- Flexible data storage (e.g., {"ingredients": ["cheese", "tomato"], "dietary": "vegetarian"})
     price REAL NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE menu_items (
 -- Inventory Items Table (Added allergens array and JSONB extra_info)
 CREATE TABLE inventory_items (
     inventory_item_id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
     quantity INT NOT NULL,
     unit TEXT NOT NULL,
     allergens TEXT[] DEFAULT '{}', -- Example: {"dairy", "soy"}
