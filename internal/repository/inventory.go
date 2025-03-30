@@ -4,6 +4,7 @@ import (
 	"cafeteria/internal/models"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -130,7 +131,6 @@ func (r *InventoryRepository) Insert(ctx context.Context, item *models.Inventory
 	return nil
 }
 
-// repository/inventory_repository.go
 func (r *InventoryRepository) GetLeftovers(ctx context.Context, sortBy string, page, pageSize int) (models.LeftoversResponse, error) {
 	response := models.LeftoversResponse{
 		CurrentPage: page,
@@ -166,6 +166,12 @@ func (r *InventoryRepository) GetLeftovers(ctx context.Context, sortBy string, p
 
 	// Calculate total pages
 	response.TotalPages = int(math.Ceil(float64(totalItems) / float64(pageSize)))
+
+	// Check if the requested page exceeds the total pages
+	if page > response.TotalPages {
+		return response, fmt.Errorf("page number %d exceeds total pages %d", page, response.TotalPages)
+	}
+
 	response.HasNextPage = page < response.TotalPages
 
 	// Get paginated data with proper sorting
@@ -180,13 +186,19 @@ func (r *InventoryRepository) GetLeftovers(ctx context.Context, sortBy string, p
         ) AS paginated_items`
 
 	offset := (page - 1) * pageSize
-	err = r.Db.QueryRowContext(ctx, dataQuery, pageSize, offset).Scan(&response.Data)
+	var jsonData []byte
+	err = r.Db.QueryRowContext(ctx, dataQuery, pageSize, offset).Scan(&jsonData)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.Data = models.JSONB{}
 			return response, nil
 		}
 		return response, fmt.Errorf("failed to get leftovers: %w", err)
+	}
+
+	// Unmarshal JSON data into the response structure
+	if err := json.Unmarshal(jsonData, &response.Data); err != nil {
+		return response, fmt.Errorf("failed to unmarshal leftovers: %w", err)
 	}
 
 	return response, nil
