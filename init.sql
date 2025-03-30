@@ -93,6 +93,8 @@ GROUP BY mi.name;
 
 -- Indexes
 CREATE INDEX search_idx ON menu_items USING gin(to_tsvector('english', name || ' ' || description || ' ' || details::text));
+CREATE INDEX idx_order_items_menu_items_id ON order_items(menu_items_id);
+CREATE INDEX idx_order_items_orders_id ON order_items(orders_id);
 
 CREATE OR REPLACE FUNCTION search_all(
     query_text TEXT,
