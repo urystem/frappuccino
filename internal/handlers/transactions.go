@@ -41,7 +41,7 @@ func (h *TransactionHandler) RegisterEndpoints(mux *http.ServeMux) {
 func (h *TransactionHandler) TotalSales(w http.ResponseWriter, r *http.Request) {
 	total, err := h.Service.TotalSales(r.Context())
 	if err != nil {
-		h.Logger.Error("Error while fetching popular items", "error", err)
+		h.Logger.Error("Error while fetching popular items", "error", err.Error())
 		WriteError(w, http.StatusBadRequest, err, "something went wrong")
 		return
 	}
@@ -52,7 +52,7 @@ func (h *TransactionHandler) TotalSales(w http.ResponseWriter, r *http.Request) 
 func (h *TransactionHandler) PopularItems(w http.ResponseWriter, r *http.Request) {
 	items, err := h.Service.PopularItems(r.Context())
 	if err != nil {
-		h.Logger.Error("Error while fetching popular items", "error", err)
+		h.Logger.Error("Error while fetching popular items", "error", err.Error())
 		WriteError(w, http.StatusBadRequest, err, "something went wrong")
 		return
 	}
@@ -69,7 +69,7 @@ func (h *TransactionHandler) NumberOfOrderedItems(w http.ResponseWriter, r *http
 
 	items, err := h.Service.NumberOfOrderedItems(r.Context(), s, e)
 	if err != nil {
-		h.Logger.Error("Error while fetching popular items", "error", err)
+		h.Logger.Error("Error while fetching popular items", "error", err.Error())
 		WriteError(w, http.StatusBadRequest, err, "something went wrong")
 		return
 	}
@@ -100,7 +100,7 @@ func (h *TransactionHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 	body, err := h.Service.SearchOrders(r.Context(), q, filter, float32(minFloat), float32(maxFloat))
 	if err != nil {
-		h.Logger.Error("Failed whlile making search", "error", err)
+		h.Logger.Error("Failed whlile making search", "error", err.Error())
 		WriteError(w, http.StatusInternalServerError, err, "something went wrong")
 		return
 	}
@@ -140,7 +140,7 @@ func (h *TransactionHandler) OrderedItemsByPeriod(w http.ResponseWriter, r *http
 
 	items, err := h.Service.OrderedItemsByPeriod(r.Context(), period, month, year)
 	if err != nil {
-		h.Logger.Error("Error while fetching ordered items by period", "error", err)
+		h.Logger.Error("Error while fetching ordered items by period", "error", err.Error())
 		WriteError(w, http.StatusInternalServerError, err, "something went wrong")
 		return
 	}

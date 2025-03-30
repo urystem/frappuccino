@@ -40,7 +40,7 @@ func (h *InventoryHandler) RegisterEndpoints(mux *http.ServeMux) {
 func (h *InventoryHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	inventory, err := h.Service.GetAll(r.Context())
 	if err != nil {
-		h.Logger.Error("Failed to get all inventory items: ", "error", err)
+		h.Logger.Error("Failed to get all inventory items: ", "error", err.Error())
 		WriteError(w, http.StatusBadRequest, err, "something went wrong")
 		return
 	}
@@ -60,7 +60,7 @@ func (h *InventoryHandler) GetById(w http.ResponseWriter, r *http.Request) {
 
 	inventory, err := h.Service.GetByID(r.Context(), id)
 	if err != nil {
-		h.Logger.Error("Failed to get an inventory item: ", "error", err)
+		h.Logger.Error("Failed to get an inventory item: ", "error", err.Error())
 		WriteError(w, http.StatusBadRequest, fmt.Errorf("no such inventory item"), "something went wrong")
 		return
 	}
@@ -79,7 +79,7 @@ func (h *InventoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.Service.Delete(r.Context(), id); err != nil {
-		h.Logger.Error("Failed to delete an inventory item: ", "error", err)
+		h.Logger.Error("Failed to delete an inventory item: ", "error", err.Error())
 		WriteError(w, http.StatusBadRequest, fmt.Errorf("no such inventory item"), "something went wrong")
 		return
 	}
@@ -90,19 +90,19 @@ func (h *InventoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *InventoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	inventory := new(models.InventoryItem)
 	if err := ParseJSON(r, inventory); err != nil {
-		h.Logger.Error("Failed parsing json on an inventory item: ", "error", err)
+		h.Logger.Error("Failed parsing json on an inventory item: ", "error", err.Error())
 		WriteError(w, http.StatusBadRequest, fmt.Errorf("incorrect json format"), "something went wrong")
 		return
 	}
 
 	if err := inventory.IsValid(); err != nil {
-		h.Logger.Error("Failed parsing json on an inventory item: ", "error", err)
+		h.Logger.Error("Failed parsing json on an inventory item: ", "error", err.Error())
 		WriteError(w, http.StatusBadRequest, err, "something went wrong")
 		return
 	}
 
 	if err := h.Service.Update(r.Context(), inventory); err != nil {
-		h.Logger.Error("Failed to delete an inventory item: ", "error", err)
+		h.Logger.Error("Failed to delete an inventory item: ", "error", err.Error())
 		WriteError(w, http.StatusBadRequest, fmt.Errorf("no such inventory item"), "something went wrong")
 		return
 	}
@@ -113,19 +113,19 @@ func (h *InventoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *InventoryHandler) Insert(w http.ResponseWriter, r *http.Request) {
 	inventory := new(models.InventoryItem)
 	if err := ParseJSON(r, inventory); err != nil {
-		h.Logger.Error("Failed parsing json on an inventory item: ", "error", err)
+		h.Logger.Error("Failed parsing json on an inventory item: ", "error", err.Error())
 		WriteError(w, http.StatusBadRequest, fmt.Errorf("incorrect json format"), "something went wrong")
 		return
 	}
 
 	if err := inventory.IsValid(); err != nil {
-		h.Logger.Error("Failed parsing json on an inventory item: ", "error", err)
+		h.Logger.Error("Failed parsing json on an inventory item: ", "error", err.Error())
 		WriteError(w, http.StatusBadRequest, err, "something went wrong")
 		return
 	}
 
 	if err := h.Service.Insert(r.Context(), inventory); err != nil {
-		h.Logger.Error("Failed to insert an inventory item: ", "error", err)
+		h.Logger.Error("Failed to insert an inventory item: ", "error", err.Error())
 		WriteError(w, http.StatusBadRequest, fmt.Errorf("item with such name already exists"), "something went wrong")
 		return
 	}
@@ -142,7 +142,7 @@ func (h *InventoryHandler) GetLeftovers(w http.ResponseWriter, r *http.Request) 
 	// Get leftovers
 	response, err := h.Service.GetLeftovers(r.Context(), sortBy, page, pageSize)
 	if err != nil {
-		h.Logger.Error("Failed to get leftovers", "error", err)
+		h.Logger.Error("Failed to get leftovers", "error", err.Error())
 		WriteError(w, http.StatusInternalServerError, err, "failed to get leftovers")
 		return
 	}
