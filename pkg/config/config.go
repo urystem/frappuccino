@@ -25,7 +25,7 @@ var (
 )
 
 func LoadConfig() *Config {
-	cfg.DBHost = getEnv("DB_HOST", "localhost")
+	cfg.DBHost = getEnv("DB_HOST", "db")
 	cfg.DBUser = getEnv("DB_USER", "postgres")
 	cfg.DBPassword = getEnv("DB_PASSWORD", "postgres")
 	cfg.DBName = getEnv("DB_NAME", "cafeteria")
