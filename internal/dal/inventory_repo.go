@@ -7,8 +7,8 @@ import (
 )
 
 type InventoryDataAccess interface {
+	InsertInventory(*models.InventoryItem) (uint, error)
 	ReadInventory() ([]models.InventoryItem, error)
-	WriteInventory([]models.InventoryItem) error
 }
 
 type inventoryRepository struct {
@@ -18,6 +18,25 @@ type inventoryRepository struct {
 // Конструктор для InventoryRepository
 func NewInventoryRepository(arg_db *sql.DB) *inventoryRepository {
 	return &inventoryRepository{db: arg_db}
+}
+
+func (invCore *inventoryRepository) InsertInventory(inv *models.InventoryItem) (uint, error) {
+	tx, err := invCore.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	var lastId uint
+	_, err = tx.Exec(`
+		INSERT INTO inventory (name, description, quantity, reorder_level, unit, price)
+			VALUES($1,$2,$3,$4,$5,$6)`,
+		inv.Name,
+		inv.Descrip,
+		inv.Quantity,
+		inv.ReorderLvl,
+		inv.Unit,
+		inv.Price,
+	)
+	return lastId, txAfter(tx, err)
 }
 
 // Метод для чтения данных инвентаря из файла
@@ -44,4 +63,12 @@ func (r *inventoryRepository) WriteInventory(items []models.InventoryItem) error
 	// encoder := json.NewEncoder(file)
 	// encoder.SetIndent("", " ")
 	return nil
+}
+
+func txAfter(tx *sql.Tx, err error) error {
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }

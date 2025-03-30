@@ -1,29 +1,32 @@
 package main
 
 import (
-	"database/sql"
-	"fmt"
-	"log"
+	"database/sql" // Import the database/sql package to interact with SQL databases
+	"fmt"          // Import the fmt package for formatted I/O (printing messages, etc.)
+	"log"          // Import the log package for logging errors
+	"net/http"     // listen and serve
+	"os"           // Import the os package to access environment variables and other OS functions
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"hot-coffee/internal/router" // for mux
+
+	_ "github.com/jackc/pgx/v5/stdlib" // Import the pq PostgreSQL driver (side-effect import, it registers itself with database/sql)
 )
 
 func main() {
-	_, err := sql.Open("pgx", "postgres://latte:latte@db:5432/frappuccino")
-	if err != nil {
-		log.Fatalf("%v", err)
-		fmt.Println("qyzyq")
-	}
-	// for {
-	// 	var now string
-	// 	err = db.QueryRow("SELECT NOW()").Scan(&now)
-	// 	if err != nil {
-	// 		log.Fatalf("Ошибка запроса: %v", err)
-	// 	}
-	// 	// fmt.Println("hello")
+	// Data Source Name
+	dsn := fmt.Sprintf("postgres://%[1]s:%s@%s:%s/%s", // index starts at 1 in formatting
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"), // you can skip this env, if you use default posgresql port. 5432
+		os.Getenv("DB_NAME"))
 
-	// 	fmt.Println("⏰ Время в БД:", now)
-	// 	time.Sleep(time.Second * 5)
-	// }
-	// log.Fatalln(http.ListenAndServe(":"+"8080", router.Allrouter(db)))
+	db, err := sql.Open("pgx", dsn) // Attempt to set up the database connection
+	if err != nil {
+		log.Fatal(err)
+	} else if err = db.Ping(); err != nil {
+		log.Fatal(err)
+	}
+	routes := router.Allrouter(db)
+	log.Fatal(http.ListenAndServe(":8080", routes))
 }

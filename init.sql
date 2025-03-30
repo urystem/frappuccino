@@ -3,7 +3,7 @@
 CREATE TYPE uints AS ENUM ('g', 'ml', 'pcs');
 
 CREATE TABLE inventory (
-    id SERIAL PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(48) NOT NULL UNIQUE,
     description TEXT NOT NULL,
     quantity FLOAT NOT NULL CHECK (quantity >= 0),
@@ -15,7 +15,7 @@ CREATE TABLE inventory (
 CREATE TYPE reason_of_inventory_transaction AS ENUM ('restock', 'usage', 'cancelled', 'annul');
 
 CREATE TABLE inventory_transactions (
-    id SERIAL PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     inventory_id INT NOT NULL REFERENCES inventory (id) ON DELETE CASCADE,
     quantity_change FLOAT NOT NULL,
     reason reason_of_inventory_transaction NOT NULL,
@@ -24,7 +24,7 @@ CREATE TABLE inventory_transactions (
 
 --menu
 CREATE TABLE menu_items (
-    id SERIAL PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(48) NOT NULL UNIQUE,
     description TEXT NOT NULL,
     tags TEXT [],
@@ -40,7 +40,7 @@ CREATE TABLE menu_item_ingredients (
 
 --need trigger
 CREATE TABLE price_history (
-    id SERIAL PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     product_id INT NOT NULL REFERENCES menu_items (id) ON DELETE CASCADE,
     old_price DECIMAL(10, 2) NOT NULL CHECK (old_price >= 0),
     new_price DECIMAL(10, 2) NOT NULL CHECK (new_price >= 0),
@@ -51,7 +51,7 @@ CREATE TABLE price_history (
 CREATE TYPE order_status AS ENUM ('processing', 'accepted', 'rejected');
 
 CREATE TABLE orders (
-    id SERIAL PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     customer_name VARCHAR(64) NOT NULL,
     status order_status NOT NULL,
     allergen TEXT [],
@@ -60,13 +60,14 @@ CREATE TABLE orders (
 );
 
 CREATE TABLE order_items (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     order_id INT NOT NULL REFERENCES orders (id) ON DELETE CASCADE,
     product_id INT NOT NULL REFERENCES menu_items (id),
     quantity INT NOT NULL CHECK (quantity > 0)
 );
 
 CREATE TABLE order_status_history (
-    id SERIAL PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     order_id INT NOT NULL REFERENCES orders (id) ON DELETE CASCADE,
     status order_status NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP --NOW()

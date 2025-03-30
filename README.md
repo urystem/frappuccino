@@ -18,7 +18,7 @@
 #### **Order Management:** - All functions related to handling orders.
 #### **Support for cURL and Postman:** - Testing using popular tools.
 
-
+INSERT INTO inventory (name, description, quantity, reorder_level, unit, price) VALUES ('Espresso Beans', 'High-quality Arabica beans', 50, 10, 'kg', 25.99);
 #### Inventory Endpoints 
 | Method  | Path              | Description |
 |---------|-------------------|-------------|
