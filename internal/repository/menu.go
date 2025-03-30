@@ -4,6 +4,7 @@ import (
 	"cafeteria/internal/models"
 	"context"
 	"database/sql"
+	"fmt"
 )
 
 type MenuRepository struct {
@@ -94,17 +95,21 @@ func (r *MenuRepository) Update(ctx context.Context, item *models.MenuItem) erro
 		return err
 	}
 
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
 	var oldPrice float64
 	err = tx.QueryRowContext(ctx, "SELECT price FROM menu_items WHERE menu_item_id = $1", item.ID).Scan(&oldPrice)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 
 	_, err = tx.ExecContext(ctx, "UPDATE menu_items SET name = $1, description = $2, price = $3, allergens = $4 WHERE menu_item_id = $5",
 		item.Name, item.Description, item.Price, item.Allergens, item.ID)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 
@@ -112,18 +117,23 @@ func (r *MenuRepository) Update(ctx context.Context, item *models.MenuItem) erro
 		_, err = tx.ExecContext(ctx, "INSERT INTO price_history (menu_item_id, old_price, new_price) VALUES ($1, $2, $3)",
 			item.ID, oldPrice, item.Price)
 		if err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
 
-	err = r.updateIngredients(ctx, item.ID, item.Ingredients)
+	// Update ingredients within the transaction
+	err = r.updateIngredientsTx(ctx, tx, item.ID, item.Ingredients)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 
-	return tx.Commit()
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *MenuRepository) Insert(ctx context.Context, item *models.MenuItem) error {
@@ -141,11 +151,20 @@ func (r *MenuRepository) Insert(ctx context.Context, item *models.MenuItem) erro
 	}
 
 	for _, ingredient := range item.Ingredients {
-		_, err := tx.ExecContext(ctx, "INSERT INTO menu_item_ingredients (menu_item_id, inventory_item_id, quantity) VALUES ($1, $2, $3)",
+		var exists bool
+		err := tx.QueryRowContext(ctx, `
+			SELECT EXISTS (SELECT 1 FROM inventory_items WHERE inventory_item_id = $1)`, ingredient.InventoryItemID).Scan(&exists)
+		if err != nil || !exists {
+			tx.Rollback()
+			return fmt.Errorf("inventory item with ID %d does not exist", ingredient.InventoryItemID)
+		}
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO menu_item_ingredients (menu_item_id, inventory_item_id, quantity) 
+			VALUES ($1, $2, $3)`,
 			menuItemID, ingredient.InventoryItemID, ingredient.Quantity)
 		if err != nil {
 			tx.Rollback()
-			return err
+			return fmt.Errorf("failed to insert ingredient for menu item %d: %w", menuItemID, err)
 		}
 	}
 
@@ -172,24 +191,21 @@ func (r *MenuRepository) getIngredients(ctx context.Context, menuItemID int) ([]
 	return ingredients, nil
 }
 
-func (r *MenuRepository) updateIngredients(ctx context.Context, menuItemID int, ingredients []models.MenuItemIngredient) error {
-	_, err := r.Db.ExecContext(ctx, "DELETE FROM menu_item_ingredients WHERE menu_item_id = $1", menuItemID)
+func (r *MenuRepository) updateIngredientsTx(ctx context.Context, tx *sql.Tx, menuItemID int, ingredients []models.MenuItemIngredient) error {
+	_, err := tx.ExecContext(ctx, "DELETE FROM menu_item_ingredients WHERE menu_item_id = $1", menuItemID)
 	if err != nil {
 		return err
 	}
 
 	for _, ingredient := range ingredients {
-		ingredient.MenuItemID = menuItemID
-		if err := r.insertIngredient(ctx, ingredient); err != nil {
+		_, err := tx.ExecContext(ctx, `
+			INSERT INTO menu_item_ingredients (menu_item_id, inventory_item_id, quantity) 
+			VALUES ($1, $2, $3)`,
+			menuItemID, ingredient.InventoryItemID, ingredient.Quantity)
+		if err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-func (r *MenuRepository) insertIngredient(ctx context.Context, ingredient models.MenuItemIngredient) error {
-	_, err := r.Db.ExecContext(ctx, "INSERT INTO menu_item_ingredients (menu_item_id, inventory_item_id, quantity) VALUES ($1, $2, $3) RETURNING menu_item_ingredient_id",
-		ingredient.MenuItemID, ingredient.InventoryItemID, ingredient.Quantity)
-	return err
 }

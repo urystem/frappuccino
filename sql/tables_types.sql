@@ -6,7 +6,8 @@ CREATE TABLE orders (
     order_id SERIAL PRIMARY KEY,
     customer_name TEXT NOT NULL,
     status order_status NOT NULL DEFAULT 'pending',
-    total REAL NOT NULL
+    total REAL NOT NULL,
+    search_vector TSVECTOR
 );
 
 -- Menu Items Table (Added allergens array and JSONB details)
@@ -16,7 +17,8 @@ CREATE TABLE menu_items (
     description TEXT NOT NULL,
     details JSONB, -- Flexible data storage (e.g., {"ingredients": ["cheese", "tomato"], "dietary": "vegetarian"})
     price REAL NOT NULL,
-    allergens TEXT[] DEFAULT '{}' -- Stores multiple allergens like {"nuts", "gluten"}
+    allergens TEXT[] DEFAULT '{}', -- Stores multiple allergens like {"nuts", "gluten"}
+    search_vector TSVECTOR
 );
 
 -- Inventory Items Table (Added allergens array and JSONB extra_info)
@@ -69,3 +71,35 @@ CREATE TABLE price_history (
     new_price REAL NOT NULL,
     changed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+CREATE INDEX idx_order_items_menu_item_id ON order_items (menu_item_id);
+CREATE INDEX idx_menu_items_menu_item_id ON menu_items (menu_item_id);
+CREATE INDEX idx_menu_items_price ON menu_items(price);
+CREATE INDEX idx_orders_total ON orders(total);
+CREATE INDEX idx_menu_items_search ON menu_items USING gin(search_vector);
+CREATE INDEX idx_orders_search ON orders USING gin(search_vector);
+
+CREATE VIEW popular_menu_items AS
+SELECT 
+    mi.name, 
+    COUNT(oi.menu_item_id) AS order_count, 
+    MAX(osh.updated_at) AS last_updated_at
+FROM order_items oi
+JOIN menu_items mi ON oi.menu_item_id = mi.menu_item_id
+JOIN order_status_history osh ON osh.order_id = oi.order_id
+JOIN orders o ON oi.order_id = o.order_id
+GROUP BY mi.name;
+
+
+CREATE OR REPLACE FUNCTION update_menu_items_search_vector()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.search_vector := to_tsvector('english', NEW.name || ' ' || NEW.description);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to Automatically Update Search Vector
+CREATE TRIGGER menu_items_search_vector_trigger
+BEFORE INSERT OR UPDATE ON menu_items
+FOR EACH ROW EXECUTE FUNCTION update_menu_items_search_vector();

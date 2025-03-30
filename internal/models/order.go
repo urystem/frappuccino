@@ -61,10 +61,10 @@ type OrderItem struct {
 }
 
 type OrderStatusHistory struct {
-	ID        int         `json:"id"`
-	OrderID   int         `json:"order_id"`
-	Status    OrderStatus `json:"status"`
-	UpdatedAt time.Time   `json:"updated_at"`
+	ID        int       `json:"id"`
+	OrderID   int       `json:"order_id"`
+	Status    string    `json:"status"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (o *OrderItem) IsValid() error {

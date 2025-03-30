@@ -43,7 +43,7 @@ func (r *OrderRepository) GetAll(ctx context.Context) ([]*models.Order, error) {
 			return nil, err
 		}
 		if len(history) > 0 {
-			order.Status = history[len(history)-1].Status.String()
+			order.Status = history[len(history)-1].Status
 		}
 
 		orders = append(orders, order)
@@ -79,7 +79,7 @@ func (r *OrderRepository) GetByID(ctx context.Context, orderID int) (*models.Ord
 
 	// Assign the latest status if history exists
 	if len(history) > 0 {
-		order.Status = history[len(history)-1].Status.String()
+		order.Status = history[len(history)-1].Status
 	}
 
 	return order, nil
@@ -117,7 +117,7 @@ func (r *OrderRepository) Insert(ctx context.Context, order *models.Order) error
 
 	// Insert order items
 	for _, item := range order.Items {
-		_, err := tx.ExecContext(ctx, "INSERT INTO order_items (order_id, item_id, quantity) VALUES ($1, $2, $3)",
+		_, err := tx.ExecContext(ctx, "INSERT INTO order_items (order_id, menu_item_id, quantity) VALUES ($1, $2, $3)",
 			orderID, item.ID, item.Quantity)
 		if err != nil {
 			return err
@@ -187,7 +187,7 @@ func (r *OrderRepository) Delete(ctx context.Context, orderID int) error {
 
 // getOrderItems retrieves the items for a given order.
 func (r *OrderRepository) getOrderItems(ctx context.Context, orderID int) ([]models.OrderItem, error) {
-	rows, err := r.Db.QueryContext(ctx, "SELECT item_id, quantity FROM order_items WHERE order_id = $1", orderID)
+	rows, err := r.Db.QueryContext(ctx, "SELECT menu_item_id, quantity FROM order_items WHERE order_id = $1", orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +226,7 @@ func (r *OrderRepository) getOrderStatusHistory(ctx context.Context, orderID int
 // checkForAllergens ensures an order does not contain allergens for a customer.
 func (r *OrderRepository) checkForAllergens(ctx context.Context, tx *sql.Tx, customerID, itemID int) error {
 	var count int
-	err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM allergens WHERE customer_id = $1 AND ingredient_id IN (SELECT ingredient_id FROM item_ingredients WHERE item_id = $2)", customerID, itemID).Scan(&count)
+	err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM allergens WHERE customer_id = $1 AND ingredient_id IN (SELECT ingredient_id FROM item_ingredients WHERE menu_item_id = $2)", customerID, itemID).Scan(&count)
 	if err != nil {
 		return err
 	}
@@ -239,7 +239,7 @@ func (r *OrderRepository) checkForAllergens(ctx context.Context, tx *sql.Tx, cus
 // checkInventory ensures enough ingredients are available.
 func (r *OrderRepository) checkInventory(ctx context.Context, tx *sql.Tx, itemID, quantity int) error {
 	var available int
-	err := tx.QueryRowContext(ctx, "SELECT stock FROM inventory WHERE item_id = $1", itemID).Scan(&available)
+	err := tx.QueryRowContext(ctx, "SELECT stock FROM inventory WHERE menu_item_id = $1", itemID).Scan(&available)
 	if err != nil {
 		return err
 	}

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -20,5 +21,6 @@ func WrapContext(handler http.HandlerFunc) http.HandlerFunc {
 
 			r = r.WithContext(ctx)
 			handler.ServeHTTP(w, r)
+			defer slog.Debug("query took more than 5 seconds", r)
 		})
 }

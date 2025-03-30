@@ -66,15 +66,54 @@ func (r *InventoryRepository) Delete(ctx context.Context, id int) error {
 
 // Update modifies an existing inventory item.
 func (r *InventoryRepository) Update(ctx context.Context, item *models.InventoryItem) error {
-	_, err := r.Db.ExecContext(ctx, `
-		UPDATE inventory_items 
-		SET name = $1, quantity = $2, unit = $3, allergens = $4, extra_info = $5 
-		WHERE inventory_item_id = $6`,
+	// Start a transaction
+	tx, err := r.Db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+
+	var prevQuantity int
+	// Get the previous quantity
+	err = tx.QueryRowContext(ctx, `
+    SELECT quantity 
+    FROM inventory_items 
+    WHERE inventory_item_id = $1`, item.ID).Scan(&prevQuantity)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to get previous quantity for item %d: %w", item.ID, err)
+	}
+
+	quantityChange := item.Quantity - prevQuantity
+
+	// Update the inventory item
+	_, err = tx.ExecContext(ctx, `
+    UPDATE inventory_items 
+    SET name = $1, quantity = $2, unit = $3, allergens = $4, extra_info = $5 
+    WHERE inventory_item_id = $6`,
 		item.Name, item.Quantity, item.Unit, item.Allergens, item.ExtraInfo, item.ID)
 	if err != nil {
+		tx.Rollback()
 		return fmt.Errorf("failed to update inventory item %d: %w", item.ID, err)
 	}
+
+	// Insert the quantity change into the transactions table
+	_, err = tx.ExecContext(ctx, `
+    INSERT INTO inventory_transactions (inventory_item_id, quantity_change) 
+    VALUES ($1, $2)`,
+		item.ID, quantityChange)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to insert transaction for item %d: %w", item.ID, err)
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
 	return nil
+
 }
 
 // Insert adds a new inventory item.
