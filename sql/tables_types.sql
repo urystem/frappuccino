@@ -32,23 +32,23 @@ CREATE TABLE inventory_items (
 -- Order Items Table
 CREATE TABLE order_items (
     order_items_id SERIAL PRIMARY KEY,
-    orders_id INT REFERENCES orders(orders_id) ON DELETE CASCADE,
-    menu_items_id INT REFERENCES menu_items(menu_items_id) ON DELETE CASCADE,
+    orders_id INT REFERENCES orders(orders_id) ,
+    menu_items_id INT REFERENCES menu_items(menu_items_id) ,
     quantity INT NOT NULL
 );
 
 -- Menu Item Ingredients Table
 CREATE TABLE menu_item_ingredients (
     menu_item_ingredients_id SERIAL PRIMARY KEY,
-    menu_items_id INT REFERENCES menu_items(menu_items_id) ON DELETE CASCADE,
-    inventory_items_id INT REFERENCES inventory_items(inventory_items_id) ON DELETE CASCADE,
+    menu_items_id INT REFERENCES menu_items(menu_items_id) ,
+    inventory_items_id INT REFERENCES inventory_items(inventory_items_id) ,
     quantity INT NOT NULL
 );
 
 -- Inventory Transactions Table
 CREATE TABLE inventory_transactions (
     transaction_id SERIAL PRIMARY KEY,
-    inventory_items_id INT REFERENCES inventory_items(inventory_items_id) ON DELETE CASCADE,
+    inventory_items_id INT REFERENCES inventory_items(inventory_items_id) ,
     quantity_change INT NOT NULL,
     transaction_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -56,7 +56,7 @@ CREATE TABLE inventory_transactions (
 -- Order Status History Table
 CREATE TABLE order_status_history (
     status_history_id SERIAL PRIMARY KEY,
-    orders_id INT REFERENCES orders(orders_id) ON DELETE CASCADE,
+    orders_id INT REFERENCES orders(orders_id) ,
     status order_status NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -64,7 +64,7 @@ CREATE TABLE order_status_history (
 -- Price History Table
 CREATE TABLE price_history (
     price_history_id SERIAL PRIMARY KEY,
-    menu_items_id INT REFERENCES menu_items(menu_items_id) ON DELETE CASCADE,
+    menu_items_id INT REFERENCES menu_items(menu_items_id) ,
     old_price REAL NOT NULL,
     new_price REAL NOT NULL,
     changed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
