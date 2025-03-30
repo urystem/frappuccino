@@ -1,3 +1,13 @@
+CREATE DATABASE frappuccino_db
+    WITH
+    OWNER = postgres
+    ENCODING = 'UTF8'
+    LOCALE_PROVIDER = 'libc'
+    CONNECTION LIMIT = -1
+    IS_TEMPLATE = False;
+
+ALTER USER postgres WITH PASSWORD 'postgres';
+
 -- Order Status Enum
 CREATE TYPE order_status AS ENUM ('pending', 'confirmed', 'in progress', 'completed', 'cancelled', 'rejected');
 
