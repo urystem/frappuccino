@@ -4,7 +4,9 @@ import (
 	"cafeteria/internal/models"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"math"
 )
 
 type InventoryRepository struct {
@@ -37,7 +39,7 @@ func (r *InventoryRepository) GetAll(ctx context.Context) ([]*models.InventoryIt
 
 // GetByID retrieves an inventory item by ID.
 func (r *InventoryRepository) GetByID(ctx context.Context, id int) (*models.InventoryItem, error) {
-	rows, err := r.Db.QueryContext(ctx, "SELECT * FROM inventory_items WHERE inventory_item_id = $1", id)
+	rows, err := r.Db.QueryContext(ctx, "SELECT * FROM inventory_items WHERE inventory_items_id = $1", id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch inventory item %d: %w", id, err)
 	}
@@ -57,7 +59,7 @@ func (r *InventoryRepository) GetByID(ctx context.Context, id int) (*models.Inve
 
 // Delete removes an inventory item.
 func (r *InventoryRepository) Delete(ctx context.Context, id int) error {
-	_, err := r.Db.ExecContext(ctx, "DELETE FROM inventory_items WHERE inventory_item_id = $1", id)
+	_, err := r.Db.ExecContext(ctx, "DELETE FROM inventory_items WHERE inventory_items_id = $1", id)
 	if err != nil {
 		return fmt.Errorf("failed to delete inventory item %d: %w", id, err)
 	}
@@ -77,7 +79,7 @@ func (r *InventoryRepository) Update(ctx context.Context, item *models.Inventory
 	err = tx.QueryRowContext(ctx, `
     SELECT quantity 
     FROM inventory_items 
-    WHERE inventory_item_id = $1`, item.ID).Scan(&prevQuantity)
+    WHERE inventory_items_id = $1`, item.ID).Scan(&prevQuantity)
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to get previous quantity for item %d: %w", item.ID, err)
@@ -89,7 +91,7 @@ func (r *InventoryRepository) Update(ctx context.Context, item *models.Inventory
 	_, err = tx.ExecContext(ctx, `
     UPDATE inventory_items 
     SET name = $1, quantity = $2, unit = $3, allergens = $4, extra_info = $5 
-    WHERE inventory_item_id = $6`,
+    WHERE inventory_items_id = $6`,
 		item.Name, item.Quantity, item.Unit, item.Allergens, item.ExtraInfo, item.ID)
 	if err != nil {
 		tx.Rollback()
@@ -98,7 +100,7 @@ func (r *InventoryRepository) Update(ctx context.Context, item *models.Inventory
 
 	// Insert the quantity change into the transactions table
 	_, err = tx.ExecContext(ctx, `
-    INSERT INTO inventory_transactions (inventory_item_id, quantity_change) 
+    INSERT INTO inventory_transactions (inventory_items_id, quantity_change) 
     VALUES ($1, $2)`,
 		item.ID, quantityChange)
 	if err != nil {
@@ -126,6 +128,68 @@ func (r *InventoryRepository) Insert(ctx context.Context, item *models.Inventory
 		return fmt.Errorf("failed to insert inventory item %s: %w", item.Name, err)
 	}
 	return nil
+}
+
+// repository/inventory_repository.go
+func (r *InventoryRepository) GetLeftovers(ctx context.Context, sortBy string, page, pageSize int) (models.LeftoversResponse, error) {
+	response := models.LeftoversResponse{
+		CurrentPage: page,
+		PageSize:    pageSize,
+	}
+
+	// Validate and set defaults
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+
+	// Build sorting
+	sortQuery := ""
+	switch sortBy {
+	case "quantity":
+		sortQuery = "ORDER BY quantity DESC, name"
+	case "name":
+		sortQuery = "ORDER BY name"
+	default:
+		sortQuery = "ORDER BY name"
+	}
+
+	// Get total count
+	countQuery := `SELECT COUNT(*) FROM inventory_items WHERE quantity > 0`
+	var totalItems int
+	err := r.Db.QueryRowContext(ctx, countQuery).Scan(&totalItems)
+	if err != nil {
+		return response, fmt.Errorf("failed to count leftovers: %w", err)
+	}
+
+	// Calculate total pages
+	response.TotalPages = int(math.Ceil(float64(totalItems) / float64(pageSize)))
+	response.HasNextPage = page < response.TotalPages
+
+	// Get paginated data with proper sorting
+	dataQuery := `
+        SELECT jsonb_object_agg(name, jsonb_build_object('quantity', quantity))
+        FROM (
+            SELECT name, quantity
+            FROM inventory_items
+            WHERE quantity > 0
+            ` + sortQuery + `
+            LIMIT $1 OFFSET $2
+        ) AS paginated_items`
+
+	offset := (page - 1) * pageSize
+	err = r.Db.QueryRowContext(ctx, dataQuery, pageSize, offset).Scan(&response.Data)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			response.Data = models.JSONB{}
+			return response, nil
+		}
+		return response, fmt.Errorf("failed to get leftovers: %w", err)
+	}
+
+	return response, nil
 }
 
 // scanRowsIntoProduct scans a database row into an InventoryItem.

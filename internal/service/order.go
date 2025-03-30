@@ -12,6 +12,7 @@ type OrderRepository interface {
 	Delete(ctx context.Context, id int) error
 	Update(ctx context.Context, order *models.Order) error
 	Insert(ctx context.Context, order *models.Order) error
+	ProcessBatchOrders(ctx context.Context, orders []models.BatchOrder) ([]models.OrderResult, models.BatchSummary, error)
 }
 
 // OrderService provides business logic for managing orders.
@@ -42,4 +43,8 @@ func (s *OrderService) Update(ctx context.Context, order *models.Order) error {
 
 func (s *OrderService) Insert(ctx context.Context, order *models.Order) error {
 	return s.Repo.Insert(ctx, order)
+}
+
+func (s *OrderService) ProcessBatchOrders(ctx context.Context, orders []models.BatchOrder) ([]models.OrderResult, models.BatchSummary, error) {
+	return s.Repo.ProcessBatchOrders(ctx, orders)
 }

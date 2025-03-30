@@ -12,6 +12,7 @@ type InventoryRepository interface {
 	Delete(ctx context.Context, id int) error
 	Update(ctx context.Context, item *models.InventoryItem) error
 	Insert(ctx context.Context, item *models.InventoryItem) error
+	GetLeftovers(ctx context.Context, sortBy string, page, pageSize int) (models.LeftoversResponse, error)
 }
 
 // InventoryService provides business logic for managing inventory.
@@ -48,4 +49,8 @@ func (s *InventoryService) Insert(ctx context.Context, item *models.InventoryIte
 		return err
 	}
 	return s.Repo.Insert(ctx, item)
+}
+
+func (s *InventoryService) GetLeftovers(ctx context.Context, sortBy string, page, pageSize int) (models.LeftoversResponse, error) {
+	return s.Repo.GetLeftovers(ctx, sortBy, page, pageSize)
 }

@@ -23,6 +23,15 @@ type InventoryTransaction struct {
 	TransactionDate time.Time `json:"transaction_date"`
 }
 
+// repository/inventory_repository.go
+type LeftoversResponse struct {
+	CurrentPage int   `json:"currentPage"`
+	HasNextPage bool  `json:"hasNextPage"`
+	PageSize    int   `json:"pageSize"`
+	TotalPages  int   `json:"totalPages"`
+	Data        JSONB `json:"data"`
+}
+
 func (i *InventoryItem) IsValid() error {
 	if i.Name == "" || i.Unit == "" {
 		return errors.New("name or unit cannot be empty")

@@ -16,6 +16,7 @@ type InventoryService interface {
 	Delete(ctx context.Context, id int) error
 	Update(ctx context.Context, item *models.InventoryItem) error
 	Insert(ctx context.Context, item *models.InventoryItem) error
+	GetLeftovers(ctx context.Context, sortBy string, page, pageSize int) (models.LeftoversResponse, error)
 }
 
 type InventoryHandler struct {
@@ -33,6 +34,7 @@ func (h *InventoryHandler) RegisterEndpoints(mux *http.ServeMux) {
 	mux.HandleFunc("GET /inventory/{id}", middleware.Middleware(h.GetById))
 	mux.HandleFunc("PUT /inventory", middleware.Middleware(h.Update))
 	mux.HandleFunc("DELETE /inventory/{id}", middleware.Middleware(h.Delete))
+	mux.HandleFunc("GET /inventory/getLeftOvers", middleware.Middleware(h.GetLeftovers))
 }
 
 func (h *InventoryHandler) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -129,4 +131,21 @@ func (h *InventoryHandler) Insert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *InventoryHandler) GetLeftovers(w http.ResponseWriter, r *http.Request) {
+	// Get query parameters
+	sortBy := r.URL.Query().Get("sortBy")
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+
+	// Get leftovers
+	response, err := h.Service.GetLeftovers(r.Context(), sortBy, page, pageSize)
+	if err != nil {
+		h.Logger.Error("Failed to get leftovers", "error", err)
+		WriteError(w, http.StatusInternalServerError, err, "failed to get leftovers")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, response)
 }

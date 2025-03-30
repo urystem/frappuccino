@@ -1,3 +1,4 @@
+// models/jsonb.go
 package models
 
 import (
@@ -6,13 +7,13 @@ import (
 	"errors"
 )
 
-type JSONB map[string]any
+type JSONB map[string]interface{}
 
 func (j JSONB) Value() (driver.Value, error) {
 	return json.Marshal(j)
 }
 
-func (j *JSONB) Scan(value any) error {
+func (j *JSONB) Scan(value interface{}) error {
 	b, ok := value.([]byte)
 	if !ok {
 		return errors.New("type assertion to []byte failed")

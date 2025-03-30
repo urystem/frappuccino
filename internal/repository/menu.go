@@ -16,7 +16,7 @@ func NewMenuRepository(db *sql.DB) *MenuRepository {
 }
 
 func (r *MenuRepository) GetAll(ctx context.Context) ([]*models.MenuItem, error) {
-	rows, err := r.Db.QueryContext(ctx, "SELECT menu_item_id, name, description, details, price, allergens FROM menu_items")
+	rows, err := r.Db.QueryContext(ctx, "SELECT menu_items_id, name, description, details, price, allergens FROM menu_items")
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (r *MenuRepository) GetByID(ctx context.Context, id int) (*models.MenuItem,
 	}
 	defer tx.Rollback()
 
-	row := tx.QueryRowContext(ctx, "SELECT menu_item_id, name, description, details, price, allergens FROM menu_items WHERE menu_item_id = $1", id)
+	row := tx.QueryRowContext(ctx, "SELECT menu_items_id, name, description, details, price, allergens FROM menu_items WHERE menu_items_id = $1", id)
 
 	item := new(models.MenuItem)
 	err = row.Scan(&item.ID, &item.Name, &item.Description, &item.Details, &item.Price, &item.Allergens)
@@ -74,13 +74,13 @@ func (r *MenuRepository) Delete(ctx context.Context, id int) error {
 		return err
 	}
 
-	_, err = tx.ExecContext(ctx, "DELETE FROM menu_item_ingredients WHERE menu_item_id = $1", id)
+	_, err = tx.ExecContext(ctx, "DELETE FROM menu_item_ingredients WHERE menu_items_id = $1", id)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	_, err = tx.ExecContext(ctx, "DELETE FROM menu_items WHERE menu_item_id = $1", id)
+	_, err = tx.ExecContext(ctx, "DELETE FROM menu_items WHERE menu_items_id = $1", id)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -102,19 +102,19 @@ func (r *MenuRepository) Update(ctx context.Context, item *models.MenuItem) erro
 	}()
 
 	var oldPrice float64
-	err = tx.QueryRowContext(ctx, "SELECT price FROM menu_items WHERE menu_item_id = $1", item.ID).Scan(&oldPrice)
+	err = tx.QueryRowContext(ctx, "SELECT price FROM menu_items WHERE menu_items_id = $1", item.ID).Scan(&oldPrice)
 	if err != nil {
 		return err
 	}
 
-	_, err = tx.ExecContext(ctx, "UPDATE menu_items SET name = $1, description = $2, price = $3, allergens = $4 WHERE menu_item_id = $5",
+	_, err = tx.ExecContext(ctx, "UPDATE menu_items SET name = $1, description = $2, price = $3, allergens = $4 WHERE menu_items_id = $5",
 		item.Name, item.Description, item.Price, item.Allergens, item.ID)
 	if err != nil {
 		return err
 	}
 
 	if oldPrice != item.Price {
-		_, err = tx.ExecContext(ctx, "INSERT INTO price_history (menu_item_id, old_price, new_price) VALUES ($1, $2, $3)",
+		_, err = tx.ExecContext(ctx, "INSERT INTO price_history (menu_items_id, old_price, new_price) VALUES ($1, $2, $3)",
 			item.ID, oldPrice, item.Price)
 		if err != nil {
 			return err
@@ -143,7 +143,7 @@ func (r *MenuRepository) Insert(ctx context.Context, item *models.MenuItem) erro
 	}
 
 	var menuItemID int
-	err = tx.QueryRowContext(ctx, "INSERT INTO menu_items (name, description, details, price, allergens) VALUES ($1, $2, $3, $4, $5) RETURNING menu_item_id",
+	err = tx.QueryRowContext(ctx, "INSERT INTO menu_items (name, description, details, price, allergens) VALUES ($1, $2, $3, $4, $5) RETURNING menu_items_id",
 		item.Name, item.Description, item.Details, item.Price, item.Allergens).Scan(&menuItemID)
 	if err != nil {
 		tx.Rollback()
@@ -153,13 +153,13 @@ func (r *MenuRepository) Insert(ctx context.Context, item *models.MenuItem) erro
 	for _, ingredient := range item.Ingredients {
 		var exists bool
 		err := tx.QueryRowContext(ctx, `
-			SELECT EXISTS (SELECT 1 FROM inventory_items WHERE inventory_item_id = $1)`, ingredient.InventoryItemID).Scan(&exists)
+			SELECT EXISTS (SELECT 1 FROM inventory_items WHERE inventory_items_id = $1)`, ingredient.InventoryItemID).Scan(&exists)
 		if err != nil || !exists {
 			tx.Rollback()
 			return fmt.Errorf("inventory item with ID %d does not exist", ingredient.InventoryItemID)
 		}
 		_, err = tx.ExecContext(ctx, `
-			INSERT INTO menu_item_ingredients (menu_item_id, inventory_item_id, quantity) 
+			INSERT INTO menu_item_ingredients (menu_items_id, inventory_items_id, quantity) 
 			VALUES ($1, $2, $3)`,
 			menuItemID, ingredient.InventoryItemID, ingredient.Quantity)
 		if err != nil {
@@ -172,7 +172,7 @@ func (r *MenuRepository) Insert(ctx context.Context, item *models.MenuItem) erro
 }
 
 func (r *MenuRepository) getIngredients(ctx context.Context, menuItemID int) ([]models.MenuItemIngredient, error) {
-	rows, err := r.Db.QueryContext(ctx, "SELECT menu_item_ingredient_id, menu_item_id, inventory_item_id, quantity FROM menu_item_ingredients WHERE menu_item_id = $1", menuItemID)
+	rows, err := r.Db.QueryContext(ctx, "SELECT menu_item_ingredients_id, menu_items_id, inventory_items_id, quantity FROM menu_item_ingredients WHERE menu_items_id = $1", menuItemID)
 	if err != nil {
 		return nil, err
 	}
@@ -192,14 +192,14 @@ func (r *MenuRepository) getIngredients(ctx context.Context, menuItemID int) ([]
 }
 
 func (r *MenuRepository) updateIngredientsTx(ctx context.Context, tx *sql.Tx, menuItemID int, ingredients []models.MenuItemIngredient) error {
-	_, err := tx.ExecContext(ctx, "DELETE FROM menu_item_ingredients WHERE menu_item_id = $1", menuItemID)
+	_, err := tx.ExecContext(ctx, "DELETE FROM menu_item_ingredients WHERE menu_items_id = $1", menuItemID)
 	if err != nil {
 		return err
 	}
 
 	for _, ingredient := range ingredients {
 		_, err := tx.ExecContext(ctx, `
-			INSERT INTO menu_item_ingredients (menu_item_id, inventory_item_id, quantity) 
+			INSERT INTO menu_item_ingredients (menu_items_id, inventory_items_id, quantity) 
 			VALUES ($1, $2, $3)`,
 			menuItemID, ingredient.InventoryItemID, ingredient.Quantity)
 		if err != nil {

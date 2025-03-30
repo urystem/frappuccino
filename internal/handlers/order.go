@@ -4,6 +4,7 @@ import (
 	"cafeteria/internal/handlers/middleware"
 	"cafeteria/internal/models"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -16,6 +17,7 @@ type OrderService interface {
 	Delete(ctx context.Context, id int) error
 	Update(ctx context.Context, order *models.Order) error
 	Insert(ctx context.Context, order *models.Order) error
+	ProcessBatchOrders(ctx context.Context, orders []models.BatchOrder) ([]models.OrderResult, models.BatchSummary, error)
 }
 
 type OrderHandler struct {
@@ -33,6 +35,7 @@ func (h *OrderHandler) RegisterEndpoints(mux *http.ServeMux) {
 	mux.HandleFunc("GET /orders/{id}", middleware.Middleware(h.GetElementById))
 	mux.HandleFunc("PUT /orders", middleware.Middleware(h.Update))
 	mux.HandleFunc("DELETE /orders/{id}", middleware.Middleware(h.Delete))
+	mux.HandleFunc("POST /orders/batch-process", middleware.Middleware(h.ProcessBatchOrders))
 }
 
 func (h *OrderHandler) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -116,4 +119,29 @@ func (h *OrderHandler) Insert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *OrderHandler) ProcessBatchOrders(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Orders []models.BatchOrder `json:"orders"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		WriteError(w, http.StatusBadRequest, err, "invalid request body")
+		return
+	}
+
+	results, summary, err := h.Service.ProcessBatchOrders(r.Context(), request.Orders)
+	if err != nil {
+		h.Logger.Error("Failed to process batch orders", "error", err)
+		WriteError(w, http.StatusInternalServerError, err, "failed to process orders")
+		return
+	}
+
+	response := map[string]interface{}{
+		"processed_orders": results,
+		"summary":          summary,
+	}
+
+	WriteJSON(w, http.StatusOK, response)
 }
