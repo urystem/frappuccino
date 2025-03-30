@@ -1,25 +1,26 @@
 package router
 
 import (
-	"database/sql"
 	"net/http"
 
 	"hot-coffee/internal/dal"
 	"hot-coffee/internal/handler"
 	"hot-coffee/internal/service"
+
+	"github.com/jmoiron/sqlx"
 )
 
-func Allrouter(db *sql.DB) *http.ServeMux {
+func Allrouter(db *sqlx.DB) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// setup pathfile to dulinvent and build to handfunc
 	var dalInventInter dal.InventoryDataAccess = dal.NewInventoryRepository(db)
 	var serviceInventInter service.InventoryService = service.NewInventoryService(dalInventInter)
 	handInv := handler.NewInventoryHandler(serviceInventInter)
-	mux.HandleFunc("POST /inventory", handInv.CreateInventory)
-	// mux.HandleFunc("GET /inventory", handInv.GetAllInventory)
-	// mux.HandleFunc("GET /inventory/{id}", handInv.GetSpecificInventory)
-	// mux.HandleFunc("PUT /inventory/{id}", handInv.UpdateInventory)
+	mux.HandleFunc("POST /inventory", handInv.PostInventory)
+	mux.HandleFunc("GET /inventory", handInv.GetInventories)
+	mux.HandleFunc("GET /inventory/{id}", handInv.GetInventory)
+	mux.HandleFunc("PUT /inventory/{id}", handInv.PutInventory)
 	// mux.HandleFunc("DELETE /inventory/{id}", handInv.DeleteInventory)
 	// mux.HandleFunc("PUT /inventory", handInv.PutAllIng)
 

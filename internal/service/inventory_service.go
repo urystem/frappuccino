@@ -8,61 +8,43 @@ import (
 )
 
 type InventoryService interface {
-	InsertInventory(*models.InventoryItem) error
-	// GetAllInventory() ([]models.InventoryItem, error)
-	// GetSpecificInventory(string) (*models.InventoryItem, error)
-	// UpdateInventory(string, *models.InventoryItem) error
+	CreateInventory(*models.Inventory) error
+	GetAllInventories() ([]models.Inventory, error)
+	TakeInventory(uint64) (*models.Inventory, error)
+	UpgradeInventory(*models.Inventory) error
 	// DeleteInventory(string) error
 	// PutAllInvets([]models.InventoryItem) ([]string, error)
 }
 
 type inventoryServiceDal struct {
-	dal dal.InventoryDataAccess
+	invDal dal.InventoryDataAccess
 }
 
 func NewInventoryService(dalInter dal.InventoryDataAccess) *inventoryServiceDal {
-	return &inventoryServiceDal{dal: dalInter}
+	return &inventoryServiceDal{invDal: dalInter}
 }
 
-func (ser *inventoryServiceDal) InsertInventory(inv *models.InventoryItem) error {
+func (ser *inventoryServiceDal) CreateInventory(inv *models.Inventory) error {
 	if err := checkInventStruct(inv); err != nil {
 		return err
 	}
-	_, err := ser.dal.InsertInventory(inv)
-	return err
+	return ser.invDal.InsertInventoryV5(inv)
 }
 
-// func (ser *inventoryServiceDal) GetAllInventory() ([]models.InventoryItem, error) {
-// 	return ser.dal.ReadInventory()
-// }
+func (ser *inventoryServiceDal) GetAllInventories() ([]models.Inventory, error) {
+	return ser.invDal.GetAllInventory()
+}
 
-// func (ser *inventoryServiceDal) GetSpecificInventory(id string) (*models.InventoryItem, error) {
-// 	invents, err := ser.dal.ReadInventory()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	for _, v := range invents {
-// 		if v.IngredientID == id {
-// 			return &v, nil
-// 		}
-// 	}
-// 	return nil, models.ErrNotFound
-// }
+func (ser *inventoryServiceDal) TakeInventory(id uint64) (*models.Inventory, error) {
+	return ser.invDal.SelectInventory(id)
+}
 
-// func (ser *inventoryServiceDal) UpdateInventory(id string, inv *models.InventoryItem) error {
-// 	items, err := ser.dal.ReadInventory()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	for i, v := range items {
-// 		if v.IngredientID == id {
-// 			inv.IngredientID = id
-// 			items[i] = *inv
-// 			return ser.dal.WriteInventory(items)
-// 		}
-// 	}
-// 	return models.ErrNotFound
-// }
+func (ser *inventoryServiceDal) UpgradeInventory(inv *models.Inventory) error {
+	if err := checkInventStruct(inv); err != nil {
+		return err
+	}
+	return ser.invDal.UpdateInventory(inv)
+}
 
 // func (ser *inventoryServiceDal) DeleteInventory(id string) error {
 // 	items, err := ser.dal.ReadInventory()
@@ -106,7 +88,7 @@ func (ser *inventoryServiceDal) InsertInventory(inv *models.InventoryItem) error
 // 	return nil, nil
 // }
 
-func checkInventStruct(inv *models.InventoryItem) error {
+func checkInventStruct(inv *models.Inventory) error {
 	if isInvalidName(inv.Name) {
 		return errors.New("invalid name")
 	} else if inv.Quantity < 0 {

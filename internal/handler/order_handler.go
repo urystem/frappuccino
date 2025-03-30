@@ -25,13 +25,19 @@ func (h *ordHandToService) PostOrder(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") != "application/json" {
 		slog.Error("post the menu: content_Type must be application/json")
 		writeHttp(w, http.StatusBadRequest, "content/type", "not json")
-	} else if err := json.NewDecoder(r.Body).Decode(&orderStruct); err != nil {
+		return
+	}
+	if err := json.NewDecoder(r.Body).Decode(&orderStruct); err != nil {
 		slog.Error("incorrect input to post order", "error", err)
 		writeHttp(w, http.StatusBadRequest, "input json", err.Error())
-	} else if err = checkOrdStruct(&orderStruct); err != nil {
+		return
+	}
+	if err := checkOrdStruct(&orderStruct); err != nil {
 		slog.Error("invalid order struct in body")
 		writeHttp(w, http.StatusBadRequest, "invalid struct", err.Error())
-	} else if notFoundsMenusOrInvents, err := h.orderService.PostServiceOrder(&orderStruct); err != nil {
+		return
+	}
+	if notFoundsMenusOrInvents, err := h.orderService.PostServiceOrder(&orderStruct); err != nil {
 		slog.Error("Failed to post order", "error", err)
 		if err == models.ErrOrdNotFoundItem {
 			writeHttp(w, http.StatusNotFound, "item", strings.Join(notFoundsMenusOrInvents, ", ")+err.Error())
@@ -165,11 +171,16 @@ func (h *ordHandToService) PopularItem(w http.ResponseWriter, r *http.Request) {
 func checkOrdStruct(ord *models.Order) error {
 	if checkName(ord.CustomerName) {
 		return errors.New("invalid name")
-	} else if len(ord.Items) == 0 {
+	}
+
+	if len(ord.Items) == 0 {
 		return errors.New("empty items")
-	} else if ord.ID != "" || ord.Status != "" || ord.CreatedAt != "" {
+	}
+
+	if ord.ID != "" || ord.Status != "" || ord.CreatedAt != "" {
 		return errors.New("you cannot give to other fields")
 	}
+
 	for _, v := range ord.Items {
 		if checkName(v.ProductID) {
 			return errors.New("invalid item name: " + v.ProductID)
@@ -177,9 +188,9 @@ func checkOrdStruct(ord *models.Order) error {
 			return errors.New("Invalid quantity of item: " + v.ProductID)
 		}
 	}
+
 	return nil
 }
 
-func checkOdrId(id string) bool {
-	return len(id) < 6 || id[:5] != "order" || !regexp.MustCompile(`^\d+$`).MatchString(id[5:])
-}
+
+INSERT INTO inventory (id) VALUES(11);

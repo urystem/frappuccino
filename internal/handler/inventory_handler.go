@@ -4,91 +4,83 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"hot-coffee/internal/service"
 	"hot-coffee/models"
 )
 
 type inventoryHandler struct {
-	inventoryService service.InventoryService
+	invSrv service.InventoryService
 }
 
 func NewInventoryHandler(service service.InventoryService) *inventoryHandler {
-	return &inventoryHandler{inventoryService: service}
+	return &inventoryHandler{invSrv: service}
 }
 
-func (h *inventoryHandler) CreateInventory(w http.ResponseWriter, r *http.Request) {
-	var newInvent models.InventoryItem
-	if r.Header.Get("Content-Type") != "application/json" {
+func (h *inventoryHandler) PostInventory(w http.ResponseWriter, r *http.Request) {
+	if newInvent := new(models.Inventory); r.Header.Get("Content-Type") != "application/json" {
 		slog.Error("Put Menu: content type not json")
 		writeHttp(w, http.StatusBadRequest, "content type", "invalid")
 	} else if err := json.NewDecoder(r.Body).Decode(&newInvent); err != nil {
 		slog.Error("Error decoding input JSON data", "error", err)
 		writeHttp(w, http.StatusBadRequest, "Invalid input", err.Error())
-	} else if err = h.inventoryService.InsertInventory(&newInvent); err != nil {
+	} else if err = h.invSrv.CreateInventory(newInvent); err != nil {
 		slog.Error("Post inventory: "+newInvent.Name, "error", err)
-		if err == models.ErrConflict {
-			writeHttp(w, http.StatusConflict, "Inventory ", err.Error())
-		} else {
-			writeHttp(w, http.StatusInternalServerError, "Inventory", err.Error())
-		}
+		writeHttp(w, http.StatusInternalServerError, "Inventory", err.Error())
 	} else {
-		slog.Info("Post inventory: ", "success", newInvent.Name)
 		writeHttp(w, http.StatusCreated, "inventory", "created")
+		slog.Info("Post inventory: ", "success", newInvent.ID)
 	}
 }
 
-// func (h *inventoryHandler) GetAllInventory(w http.ResponseWriter, r *http.Request) {
-// 	if invents, err := h.inventoryService.GetAllInventory(); err != nil {
-// 		slog.Error("Can't get all inventory")
-// 		writeHttp(w, http.StatusInternalServerError, "get all invents", err.Error())
-// 	} else if err := bodyJsonStruct(w, invents); err != nil {
-// 		slog.Error("Get Invents: Cannot write struct to body")
-// 	}
-// }
+func (h *inventoryHandler) GetInventories(w http.ResponseWriter, r *http.Request) {
+	if invents, err := h.invSrv.GetAllInventories(); err != nil {
+		slog.Error("Can't get all inventory")
+		writeHttp(w, http.StatusInternalServerError, "get all invents", err.Error())
+	} else if err = bodyJsonStruct(w, invents); err != nil {
+		slog.Error("Get Invents: Cannot write struct to body")
+	} else {
+		slog.Info("Get", "inventories:", "succes")
+	}
+}
 
-// func (h *inventoryHandler) GetSpecificInventory(w http.ResponseWriter, r *http.Request) {
-// 	if id := r.PathValue("id"); checkName(id) {
-// 		slog.Error("Get InventBYid: Invalid id")
-// 		writeHttp(w, http.StatusBadRequest, "", "")
-// 	} else if invent, err := h.inventoryService.GetSpecificInventory(id); err != nil {
-// 		slog.Error("Get invent by id: ", "failed - ", err)
-// 		if err == models.ErrNotFound {
-// 			writeHttp(w, http.StatusNotFound, "inventory", err.Error())
-// 		} else {
-// 			writeHttp(w, http.StatusInternalServerError, "invent", err.Error())
-// 		}
-// 	} else if err = bodyJsonStruct(w, invent); err != nil {
-// 		slog.Error("Get Invent: Cannot write struct to body", "id: ", id)
-// 	}
-// }
+func (h *inventoryHandler) GetInventory(w http.ResponseWriter, r *http.Request) {
+	if id, err := strconv.ParseUint(r.PathValue("id"), 10, 0); err != nil {
+		slog.Error("Get invent by id: ", "failed", err)
+		writeHttp(w, http.StatusBadRequest, "invent", err.Error())
+	} else if invent, err := h.invSrv.TakeInventory(id); err != nil {
+		slog.Error("Get invent by id: ", "failed - ", err)
+		writeHttp(w, http.StatusInternalServerError, "invent", err.Error())
+	} else if err = bodyJsonStruct(w, invent); err != nil {
+		slog.Error("Get Invent: Cannot write struct to body", "id: ", "")
+	} else {
+		slog.Info("get ", "inventory", "success")
+	}
+}
 
-// func (h *inventoryHandler) UpdateInventory(w http.ResponseWriter, r *http.Request) {
-// 	var newInvent models.InventoryItem
-// 	if id := r.PathValue("id"); checkName(id) {
-// 		slog.Error("Put Invent: nvalid id in url")
-// 		writeHttp(w, http.StatusBadRequest, "id url", "invalid id")
-// 	} else if r.Header.Get("Content-Type") != "application/json" {
-// 		slog.Error("Put Menu: content type not json")
-// 		writeHttp(w, http.StatusBadRequest, "content type", "invalid")
-// 	} else if err := json.NewDecoder(r.Body).Decode(&newInvent); err != nil {
-// 		slog.Error("Put Invent: Error in decoder")
-// 		writeHttp(w, http.StatusBadRequest, "inventory", err.Error())
-// 	} else if err = checkInventStruct(&newInvent, false); err != nil {
-// 		slog.Error("Put invent: ", "invalid struct", err)
-// 		writeHttp(w, http.StatusBadRequest, "invalid struct", err.Error())
-// 	} else if err = h.inventoryService.UpdateInventory(id, &newInvent); err != nil {
-// 		slog.Error("Put inventory", "error", err)
-// 		if err == models.ErrNotFound {
-// 			writeHttp(w, http.StatusNotFound, "inventory", err.Error())
-// 		} else {
-// 			writeHttp(w, http.StatusInternalServerError, "inventory", err.Error())
-// 		}
-// 	} else {
-// 		slog.Info("put inventory success", "id", newInvent.IngredientID)
-// 		writeHttp(w, http.StatusOK, "updated", newInvent.IngredientID)
-// 	}
-// }
+func (h *inventoryHandler) PutInventory(w http.ResponseWriter, r *http.Request) {
+	idPath := r.PathValue("id")
+	if id, err := strconv.ParseUint(idPath, 10, 0); err != nil {
+		slog.Error("Put Invent: invalid parse id")
+		writeHttp(w, http.StatusBadRequest, "id url", "invalid id")
+	} else if inv := new(models.Inventory); r.Header.Get("Content-Type") != "application/json" {
+		slog.Error("Put inventory: content type not json")
+		writeHttp(w, http.StatusBadRequest, "content type", "invalid")
+	} else if err = json.NewDecoder(r.Body).Decode(&inv); err != nil {
+		slog.Error("Put Invent: Error in decoder")
+		writeHttp(w, http.StatusBadRequest, "inventory", err.Error())
+	} else {
+		inv.ID = id
+		if err := h.invSrv.UpgradeInventory(inv); err != nil {
+			slog.Error("Put inventory", "error", err)
+			writeHttp(w, http.StatusInternalServerError, "inventory", err.Error())
+		} else {
+			slog.Info("put inventory success", "id", inv.ID)
+			writeHttp(w, http.StatusOK, "updated", idPath)
+		}
+	}
+}
 
 // func (h *inventoryHandler) DeleteInventory(w http.ResponseWriter, r *http.Request) {
 // 	if id := r.PathValue("id"); checkName(id) {
