@@ -23,8 +23,8 @@ type inventoryRepository struct {
 }
 
 // Конструктор для InventoryRepository
-func NewInventoryRepository(arg_db *sqlx.DB) *inventoryRepository {
-	return &inventoryRepository{db: arg_db}
+func NewInventoryRepository(db *sqlx.DB) *inventoryRepository {
+	return &inventoryRepository{db: db}
 }
 
 func (invCore *inventoryRepository) InsertInventoryV1(inv *models.Inventory) error {
@@ -87,7 +87,9 @@ func (invCore *inventoryRepository) InsertInventoryV5(inv *models.Inventory) err
 		inv.Unit,
 		inv.Price).Scan(&inv.ID); err != nil {
 		return err
-	} else if _, err = tx.NamedExec(`
+	}
+
+	if _, err = tx.NamedExec(`
 	INSERT INTO inventory_transactions (inventory_id, quantity_change, reason)
 		VALUES (:id, :quantity, 'restock')
 	`, inv); err != nil {
@@ -106,6 +108,7 @@ func (invCore *inventoryRepository) InsertInventoryV6(inv *models.Inventory) err
 	INSERT INTO inventory (name, description, quantity, reorder_level, unit, price)
 	VALUES (:name, :description, :quantity, :reorder_level, :unit, :price)
 	RETURNING id`)
+
 	if err != nil {
 		return err // Ошибка при подготовке запроса
 	}
@@ -114,7 +117,9 @@ func (invCore *inventoryRepository) InsertInventoryV6(inv *models.Inventory) err
 	// Выполнение подготовленного запроса
 	if err = stmt.QueryRow(inv).Scan(&inv.ID); err != nil {
 		return err // Ошибка при выполнении
-	} else if _, err = tx.NamedExec(`
+	}
+
+	if _, err = tx.NamedExec(`
 	INSERT INTO inventory_transactions (inventory_id, quantity_change, reason)
 		VALUES (:id, :quantity, 'restock')
 	`, inv); err != nil {
@@ -141,34 +146,48 @@ func (invCore *inventoryRepository) UpdateInventory(inv *models.Inventory) error
 		return err
 	}
 	defer tx.Rollback()
+
 	var quantity_changed float64
 	// err = tx.QueryRow(`SELECT quantity FROM inventory WHERE id=$1`,inv.ID).Scan(&oldQuantity)
 	if err = tx.Get(&quantity_changed, `SELECT quantity FROM inventory WHERE id=$1`, inv.ID); err != nil {
 		return err
-	} else if res, err := tx.NamedExec(`
+	}
+
+	res, err := tx.NamedExec(`
 	UPDATE inventory
 		SET name = :name, description = :description, quantity = :quantity,
 		    reorder_level = :reorder_level, unit = :unit, price = :price
-		WHERE id = :id
-	`, inv); err != nil {
+		WHERE id = :id`, inv)
+
+	if err != nil {
 		return err
-		// UPDATE егер id табылмаса да қате қайтармайды.
-		// сондықтан кестенің өзгерісін rowsAffected пен тексереміз
-		// егер айди бар болып, бірақ жаңа кестеден айырмасы жоқ болса да, rowsAffected =1 болады
-		// демек тек жоқ айдиде ғана 0 болады
-	} else if rowsAffected, err := res.RowsAffected(); err != nil {
+	}
+
+	// UPDATE егер id табылмаса да қате қайтармайды.
+	// сондықтан кестенің өзгерісін rowsAffected пен тексереміз
+	// егер айди бар болып, бірақ жаңа кестеден айырмасы жоқ болса да, rowsAffected =1 болады
+	// демек тек жоқ айдиде ғана 0 болады
+	rowsAffected, err := res.RowsAffected()
+
+	if err != nil {
 		return err
-	} else if quantity_changed = inv.Quantity - quantity_changed; rowsAffected == 0 {
+	}
+
+	if rowsAffected == 0 {
 		return models.ErrNotFound
 	}
+
+	quantity_changed = inv.Quantity - quantity_changed
+
 	reason := "restock"
 	if quantity_changed < 0 {
 		reason = "annul"
 	}
+
 	if _, err = tx.Exec(`
 	INSERT INTO inventory_transactions (inventory_id, quantity_change, reason)
 		VALUES ($1, $2, $3)
-	`, inv.ID, inv.Quantity); err != nil {
+	`, inv.ID, inv.Quantity, reason); err != nil {
 		return err
 	}
 	return tx.Commit()
