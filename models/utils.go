@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	ErrInvalidName     = errors.New("")
+	ErrDelDepend       = errors.New("cannot delete")
 	ErrConflict        = errors.New(" already exists")
 	ErrNotFound        = errors.New(" not found")
 	ErrNotFoundIngs    = errors.New(" not found ingrident(s) for menu")

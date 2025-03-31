@@ -6,23 +6,22 @@ import (
 )
 
 type menuServiceToDal struct {
-	menuDalInt   dal.MenuDalInter
-	inventDalInt dal.InventoryDataAccess
+	menuDal dal.MenuDalInter
 }
 
 type MenuServiceInter interface {
-	PostServiceMenu(*models.MenuItem) ([]string, error)
-	GetServiceMenus() ([]models.MenuItem, error)
-	GetServiceMenuById(string) (*models.MenuItem, error)
-	PutServiceMenuById(*models.MenuItem, string) ([]string, error)
-	DelServiceMenuById(string) error
+	// CreateMenu(*models.MenuItem) ([]string, error)
+	CollectMenus() ([]models.MenuItem, error)
+	// GetServiceMenuById(string) (*models.MenuItem, error)
+	// PutServiceMenuById(*models.MenuItem, string) ([]string, error)
+	// DelServiceMenuById(string) error
 }
 
-func ReturnMenuSerStruct(interMenuDal dal.MenuDalInter, interIngDal dal.InventoryDataAccess) *menuServiceToDal {
-	return &menuServiceToDal{menuDalInt: interMenuDal, inventDalInt: interIngDal}
+func ReturnMenuSerStruct(interMenuDal dal.MenuDalInter) *menuServiceToDal {
+	return &menuServiceToDal{menuDal: interMenuDal}
 }
 
-// func (ser *menuServiceToDal) PostServiceMenu(menu *models.MenuItem) ([]string, error) {
+// func (ser *menuServiceToDal) CreateMenu(menu *models.MenuItem) ([]string, error) {
 // 	if ings, err := ser.checkNotFoundIngs(menu.Ingredients); err != nil {
 // 		return nil, err
 // 	} else if len(ings) != 0 {
@@ -40,9 +39,9 @@ func ReturnMenuSerStruct(interMenuDal dal.MenuDalInter, interIngDal dal.Inventor
 // 	return nil, ser.menuDalInt.WriteMenuDal(append(menus, *menu))
 // }
 
-// func (ser *menuServiceToDal) GetServiceMenus() ([]models.MenuItem, error) {
-// 	return ser.menuDalInt.ReadMenuDal()
-// }
+func (ser *menuServiceToDal) CollectMenus() ([]models.MenuItem, error) {
+	return ser.menuDal.SelectMenus()
+}
 
 // func (ser *menuServiceToDal) GetServiceMenuById(id string) (*models.MenuItem, error) {
 // 	menus, err := ser.menuDalInt.ReadMenuDal()

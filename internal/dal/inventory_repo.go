@@ -1,10 +1,6 @@
 package dal
 
-import (
-	"hot-coffee/models"
-
-	"github.com/jmoiron/sqlx"
-)
+import "hot-coffee/models"
 
 type InventoryDataAccess interface {
 	// InsertInventoryV1(*models.Inventory) error
@@ -13,22 +9,14 @@ type InventoryDataAccess interface {
 	// InsertInventoryV4(*models.Inventory) error
 	InsertInventoryV5(*models.Inventory) error
 	// InsertInventoryV6(*models.Inventory) error
-	GetAllInventory() ([]models.Inventory, error)
+	SelectInventories() ([]models.Inventory, error)
 	SelectInventory(uint64) (*models.Inventory, error)
-	UpdateInventory(inv *models.Inventory) error
+	UpdateInventory(*models.Inventory) error
+	DeleteInventory(uint64) (*models.InventoryDepend, error)
 }
 
-type inventoryRepository struct {
-	db *sqlx.DB
-}
-
-// Конструктор для InventoryRepository
-func NewInventoryRepository(db *sqlx.DB) *inventoryRepository {
-	return &inventoryRepository{db: db}
-}
-
-func (invCore *inventoryRepository) InsertInventoryV1(inv *models.Inventory) error {
-	_, err := invCore.db.Exec(`
+func (core *dalCore) InsertInventoryV1(inv *models.Inventory) error {
+	_, err := core.db.Exec(`
 		INSERT INTO inventory (name, description, quantity, reorder_level, unit, price)
 			VALUES($1,$2,$3,$4,$5,$6)`,
 		inv.Name,
@@ -41,16 +29,16 @@ func (invCore *inventoryRepository) InsertInventoryV1(inv *models.Inventory) err
 	return err
 }
 
-func (invCore *inventoryRepository) InsertInventoryV2(inv *models.Inventory) error {
-	_, err := invCore.db.NamedExec(`
+func (core *dalCore) InsertInventoryV2(inv *models.Inventory) error {
+	_, err := core.db.NamedExec(`
 		INSERT INTO inventory (name, description, quantity, reorder_level, unit, price)
 			VALUES (:name, :description, :quantity, :reorder_level, :unit, :price)
 	`, inv)
 	return err
 }
 
-func (invCore *inventoryRepository) InsertInventoryV3(inv *models.Inventory) error {
-	return invCore.db.QueryRow(`
+func (core *dalCore) InsertInventoryV3(inv *models.Inventory) error {
+	return core.db.QueryRow(`
 	INSERT INTO inventory (name, description, quantity, reorder_level, unit, price)
 		VALUES ($1,$2,$3,$4,$5,$6)
 	RETURNING id`,
@@ -62,15 +50,15 @@ func (invCore *inventoryRepository) InsertInventoryV3(inv *models.Inventory) err
 		inv.Price).Scan(&inv.ID)
 }
 
-func (invCore *inventoryRepository) InsertInventoryV4(inv *models.Inventory) error {
-	return invCore.db.Get(&inv.ID, `
+func (core *dalCore) InsertInventoryV4(inv *models.Inventory) error {
+	return core.db.Get(&inv.ID, `
     INSERT INTO inventory (name, description, quantity, reorder_level, unit, price)
     VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING id`, inv.Name, inv.Descrip, inv.Quantity, inv.ReorderLvl, inv.Unit, inv.Price)
 }
 
-func (invCore *inventoryRepository) InsertInventoryV5(inv *models.Inventory) error {
-	tx, err := invCore.db.Beginx()
+func (core *dalCore) InsertInventoryV5(inv *models.Inventory) error {
+	tx, err := core.db.Beginx()
 	if err != nil {
 		return err
 	}
@@ -98,8 +86,8 @@ func (invCore *inventoryRepository) InsertInventoryV5(inv *models.Inventory) err
 	return tx.Commit()
 }
 
-func (invCore *inventoryRepository) InsertInventoryV6(inv *models.Inventory) error {
-	tx, err := invCore.db.Beginx()
+func (core *dalCore) InsertInventoryV6(inv *models.Inventory) error {
+	tx, err := core.db.Beginx()
 	if err != nil {
 		return err
 	}
@@ -108,7 +96,6 @@ func (invCore *inventoryRepository) InsertInventoryV6(inv *models.Inventory) err
 	INSERT INTO inventory (name, description, quantity, reorder_level, unit, price)
 	VALUES (:name, :description, :quantity, :reorder_level, :unit, :price)
 	RETURNING id`)
-
 	if err != nil {
 		return err // Ошибка при подготовке запроса
 	}
@@ -128,20 +115,19 @@ func (invCore *inventoryRepository) InsertInventoryV6(inv *models.Inventory) err
 	return tx.Commit()
 }
 
-func (invCore *inventoryRepository) GetAllInventory() ([]models.Inventory, error) {
+func (core *dalCore) SelectInventories() ([]models.Inventory, error) {
 	var invts []models.Inventory
-	err := invCore.db.Select(&invts, "SELECT * FROM inventory")
+	err := core.db.Select(&invts, "SELECT * FROM inventory")
 	return invts, err
 }
 
-func (invCore *inventoryRepository) SelectInventory(id uint64) (*models.Inventory, error) {
+func (core *dalCore) SelectInventory(id uint64) (*models.Inventory, error) {
 	var inv models.Inventory
-	err := invCore.db.Get(&inv, "SELECT * FROM inventory WHERE id = $1", id)
-	return &inv, err
+	return &inv, core.db.Get(&inv, "SELECT * FROM inventory WHERE id = $1", id)
 }
 
-func (invCore *inventoryRepository) UpdateInventory(inv *models.Inventory) error {
-	tx, err := invCore.db.Beginx()
+func (core *dalCore) UpdateInventory(inv *models.Inventory) error {
+	tx, err := core.db.Beginx()
 	if err != nil {
 		return err
 	}
@@ -158,7 +144,6 @@ func (invCore *inventoryRepository) UpdateInventory(inv *models.Inventory) error
 		SET name = :name, description = :description, quantity = :quantity,
 		    reorder_level = :reorder_level, unit = :unit, price = :price
 		WHERE id = :id`, inv)
-
 	if err != nil {
 		return err
 	}
@@ -168,7 +153,6 @@ func (invCore *inventoryRepository) UpdateInventory(inv *models.Inventory) error
 	// егер айди бар болып, бірақ жаңа кестеден айырмасы жоқ болса да, rowsAffected =1 болады
 	// демек тек жоқ айдиде ғана 0 болады
 	rowsAffected, err := res.RowsAffected()
-
 	if err != nil {
 		return err
 	}
@@ -187,8 +171,47 @@ func (invCore *inventoryRepository) UpdateInventory(inv *models.Inventory) error
 	if _, err = tx.Exec(`
 	INSERT INTO inventory_transactions (inventory_id, quantity_change, reason)
 		VALUES ($1, $2, $3)
-	`, inv.ID, inv.Quantity, reason); err != nil {
+	`, inv.ID, quantity_changed, reason); err != nil {
 		return err
 	}
 	return tx.Commit()
+}
+
+func (core *dalCore) DeleteInventory(id uint64) (*models.InventoryDepend, error) {
+	tx, err := core.db.Beginx()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	var menuDepend models.InventoryDepend
+
+	menusNames := `SELECT id, name
+		FROM menu_items
+		JOIN menu_item_ingredients ON id=product_id
+		WHERE inventory_id=$1`
+
+	err = tx.Select(&menuDepend.Menus, menusNames, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(menuDepend.Menus) != 0 {
+		menuDepend.Err = models.ErrDelDepend.Error()
+		return &menuDepend, nil
+	}
+	res, err := tx.Exec(`DELETE FROM inventory WHERE id = $1`, id)
+	if err != nil {
+		return nil, err
+	}
+
+	affects, err := res.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+
+	if affects == 0 {
+		return nil, models.ErrNotFound
+	}
+	return nil, tx.Commit()
 }

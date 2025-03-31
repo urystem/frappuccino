@@ -9,6 +9,7 @@ import (
 
 	"hot-coffee/internal/router" // for mux
 
+	"github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/stdlib" // Import the pq PostgreSQL driver (side-effect import, it registers itself with database/sql)
 	"github.com/jmoiron/sqlx"
 )
@@ -25,9 +26,47 @@ func main() {
 	db, err := sqlx.Open("pgx", dsn) // Attempt to set up the database connection
 	if err != nil {
 		log.Fatal(err)
-	} else if err = db.Ping(); err != nil {
+	}
+
+	if err = db.Ping(); err != nil {
 		log.Fatal(err)
 	}
+
 	routes := router.Allrouter(db)
+
 	log.Fatal(http.ListenAndServe(":8080", routes))
+}
+
+func GetMenuItems(db *sqlx.DB) ([]MenuItem, error) {
+	query := `SELECT id, name, description, tags, allergens, price FROM menu_items`
+	rows, err := db.Queryx(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var menuItems []MenuItem
+	for rows.Next() {
+		var item MenuItem
+		var tags pgx.TextArray // 👈 Используем pgx.TextArray
+		var allergens pgx.TextArray
+
+		err := rows.Scan(
+			&item.ID,
+			&item.Name,
+			&item.Description,
+			&tags,      // 👈 pgx.TextArray автоматически конвертируется в []string
+			&allergens, // 👈 pgx.TextArray автоматически конвертируется в []string
+			&item.Price,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		item.Tags = tags.Elements // 👈 Присваиваем []string
+		item.Allergens = allergens.Elements
+		menuItems = append(menuItems, item)
+	}
+
+	return menuItems, nil
 }

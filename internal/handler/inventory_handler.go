@@ -18,8 +18,7 @@ func NewInventoryHandler(service service.InventoryService) *inventoryHandler {
 	return &inventoryHandler{invSrv: service}
 }
 
-func (h *inventoryHandler) PostInventory(w http.ResponseWriter, r *http.Request) {
-
+func (handl *inventoryHandler) PostInventory(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") != "application/json" {
 		slog.Error("Put Menu: content type not json")
 		writeHttp(w, http.StatusBadRequest, "content type", "invalid")
@@ -34,7 +33,7 @@ func (h *inventoryHandler) PostInventory(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = h.invSrv.CreateInventory(newInvent)
+	err = handl.invSrv.CreateInventory(newInvent)
 	if err != nil {
 		slog.Error("Post inventory: "+newInvent.Name, "error", err)
 		writeHttp(w, http.StatusInternalServerError, "Inventory", err.Error())
@@ -45,16 +44,15 @@ func (h *inventoryHandler) PostInventory(w http.ResponseWriter, r *http.Request)
 	slog.Info("Post inventory: ", "success", newInvent.ID)
 }
 
-func (h *inventoryHandler) GetInventories(w http.ResponseWriter, r *http.Request) {
-	invents, err := h.invSrv.GetAllInventories()
-
+func (handl *inventoryHandler) GetInventories(w http.ResponseWriter, r *http.Request) {
+	invents, err := handl.invSrv.CollectInventories()
 	if err != nil {
 		slog.Error("Can't get all inventory")
 		writeHttp(w, http.StatusInternalServerError, "get all invents", err.Error())
 		return
 	}
 
-	err = bodyJsonStruct(w, invents)
+	err = bodyJsonStruct(w, invents, http.StatusOK)
 	if err != nil {
 		slog.Error("Get Invents: Cannot write struct to body")
 		return
@@ -62,7 +60,7 @@ func (h *inventoryHandler) GetInventories(w http.ResponseWriter, r *http.Request
 	slog.Info("Get", "inventories:", "succes")
 }
 
-func (h *inventoryHandler) GetInventory(w http.ResponseWriter, r *http.Request) {
+func (handl *inventoryHandler) GetInventory(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(r.PathValue("id"), 10, 0)
 	if err != nil {
 		slog.Error("Get invent by id: ", "failed", err)
@@ -70,25 +68,24 @@ func (h *inventoryHandler) GetInventory(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	invent, err := h.invSrv.TakeInventory(id)
+	invent, err := handl.invSrv.TakeInventory(id)
 	if err != nil {
 		slog.Error("Get invent by id: ", "failed - ", err)
 		writeHttp(w, http.StatusInternalServerError, "invent", err.Error())
 		return
 	}
 
-	if err = bodyJsonStruct(w, invent); err != nil {
+	if err = bodyJsonStruct(w, invent, http.StatusOK); err != nil {
 		slog.Error("Get Invent: Cannot write struct to body", "id: ", "")
 		return
 	}
 	slog.Info("get ", "inventory", "success")
 }
 
-func (h *inventoryHandler) PutInventory(w http.ResponseWriter, r *http.Request) {
+func (handl *inventoryHandler) PutInventory(w http.ResponseWriter, r *http.Request) {
 	idPath := r.PathValue("id")
 
 	id, err := strconv.ParseUint(idPath, 10, 0)
-	
 	if err != nil {
 		slog.Error("Put Invent: invalid parse id")
 		writeHttp(w, http.StatusBadRequest, "id url", "invalid id")
@@ -111,8 +108,7 @@ func (h *inventoryHandler) PutInventory(w http.ResponseWriter, r *http.Request) 
 
 	inv.ID = id
 
-	err = h.invSrv.UpgradeInventory(inv)
-
+	err = handl.invSrv.UpgradeInventory(inv)
 	if err != nil {
 		slog.Error("Put inventory", "error", err)
 		writeHttp(w, http.StatusInternalServerError, "inventory", err.Error())
@@ -121,25 +117,40 @@ func (h *inventoryHandler) PutInventory(w http.ResponseWriter, r *http.Request) 
 
 	slog.Info("put inventory success", "id", inv.ID)
 	writeHttp(w, http.StatusOK, "updated", idPath)
-
 }
 
-// func (h *inventoryHandler) DeleteInventory(w http.ResponseWriter, r *http.Request) {
-// 	if id := r.PathValue("id"); checkName(id) {
-// 		slog.Error("Del invent", "invalid", "id")
-// 		writeHttp(w, http.StatusBadRequest, "Invalid", "id")
-// 	} else if err := h.inventoryService.DeleteInventory(id); err != nil {
-// 		slog.Error("Del invent", "failed", err)
-// 		if err == models.ErrNotFound {
-// 			writeHttp(w, http.StatusNotFound, "invent", err.Error())
-// 		} else {
-// 			writeHttp(w, http.StatusInternalServerError, "invent", err.Error())
-// 		}
-// 	} else {
-// 		slog.Info("Deleted invent", "id", id)
-// 		writeHttp(w, http.StatusNoContent, "", "")
-// 	}
-// }
+func (handl *inventoryHandler) DeleteInventory(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(r.PathValue("id"), 10, 0)
+	if err != nil {
+		slog.Error("Get invent by id: ", "failed", err)
+		writeHttp(w, http.StatusBadRequest, "invent", err.Error())
+		return
+	}
+
+	menus, err := handl.invSrv.RemoveInventory(id)
+	if err != nil {
+		if err == models.ErrNotFound {
+			slog.Error("Del invent", "not found", err)
+			writeHttp(w, http.StatusNotFound, "invent", err.Error())
+		} else {
+			slog.Error("Del invent", "failed", err)
+			writeHttp(w, http.StatusInternalServerError, "invent", err.Error())
+		}
+		return
+	}
+
+	if menus != nil {
+		err = bodyJsonStruct(w, menus, http.StatusBadRequest)
+		if err != nil {
+			slog.Error("DELETE Invent: Error in decoder")
+			return
+		}
+		slog.Error("DELETE Invent: found depend menus")
+		return
+	}
+	slog.Info("Deleted invent", "id", id)
+	writeHttp(w, http.StatusNoContent, "", "")
+}
 
 // func (h *inventoryHandler) PutAllIng(w http.ResponseWriter, r *http.Request) {
 // 	var invents []models.InventoryItem

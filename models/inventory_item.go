@@ -12,6 +12,8 @@ type Inventory struct {
 	Price      float64 `json:"price" db:"price"`
 }
 
+
+//бұғаен json тегі қатты керек емес)
 type InventoryTransaction struct {
 	ID             uint64    `db:"id" json:"id"`
 	InventoryID    uint64    `db:"inventory_id" json:"inventory_id"`
@@ -20,3 +22,10 @@ type InventoryTransaction struct {
 	UpdatedAt      time.Time `db:"updated_at" json:"updated_at"`
 }
 
+type InventoryDepend struct {
+	Err   string `json:"error"`
+	Menus []struct {
+		ProductID uint64 `json:"product_id" db:"id"`
+		Name      string `json:"name" db:"name"`
+	}
+}

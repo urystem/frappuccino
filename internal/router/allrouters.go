@@ -14,22 +14,24 @@ func Allrouter(db *sqlx.DB) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// setup pathfile to dulinvent and build to handfunc
-	var dalInventInter dal.InventoryDataAccess = dal.NewInventoryRepository(db)
+	dalCore := dal.ReturnRepoCore(db)
+	var dalInventInter dal.InventoryDataAccess = dalCore
 	var serviceInventInter service.InventoryService = service.NewInventoryService(dalInventInter)
 	handInv := handler.NewInventoryHandler(serviceInventInter)
+
 	mux.HandleFunc("POST /inventory", handInv.PostInventory)
 	mux.HandleFunc("GET /inventory", handInv.GetInventories)
 	mux.HandleFunc("GET /inventory/{id}", handInv.GetInventory)
 	mux.HandleFunc("PUT /inventory/{id}", handInv.PutInventory)
-	// mux.HandleFunc("DELETE /inventory/{id}", handInv.DeleteInventory)
+	mux.HandleFunc("DELETE /inventory/{id}", handInv.DeleteInventory)
 	// mux.HandleFunc("PUT /inventory", handInv.PutAllIng)
 
 	// // setup pathfile to dulmenu struct and build to handfunc
-	// var dalMenuInter dal.MenuDalInter = dal.ReturnMenuDalStruct(*dir + PathFiles[1])
-	// var menuSer service.MenuServiceInter = service.ReturnMenuSerStruct(dalMenuInter, dalInventInter)
-	// menuHand := handler.ReturnMenuHaldStruct(menuSer)
-	// mux.HandleFunc("POST /menu", menuHand.PostMenu)
-	// mux.HandleFunc("GET /menu", menuHand.GetAllMenus)
+	var dalMenuInter dal.MenuDalInter = dalCore
+	var menuSerInter service.MenuServiceInter = service.ReturnMenuSerStruct(dalMenuInter)
+	handMenu := handler.ReturnMenuHaldStruct(menuSerInter)
+	// mux.HandleFunc("POST /menu", handMenu.PostMenu)
+	mux.HandleFunc("GET /menu", handMenu.GetMenus)
 	// mux.HandleFunc("GET /menu/{id}", menuHand.GetMenuById)
 	// mux.HandleFunc("PUT /menu/{id}", menuHand.PutMenuById)
 	// mux.HandleFunc("DELETE /menu/{id}", menuHand.DelMenuById)

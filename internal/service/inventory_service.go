@@ -9,10 +9,10 @@ import (
 
 type InventoryService interface {
 	CreateInventory(*models.Inventory) error
-	GetAllInventories() ([]models.Inventory, error)
+	CollectInventories() ([]models.Inventory, error)
 	TakeInventory(uint64) (*models.Inventory, error)
 	UpgradeInventory(*models.Inventory) error
-	// DeleteInventory(string) error
+	RemoveInventory(uint64) (*models.InventoryDepend, error)
 	// PutAllInvets([]models.InventoryItem) ([]string, error)
 }
 
@@ -31,8 +31,8 @@ func (ser *inventoryServiceDal) CreateInventory(inv *models.Inventory) error {
 	return ser.invDal.InsertInventoryV5(inv)
 }
 
-func (ser *inventoryServiceDal) GetAllInventories() ([]models.Inventory, error) {
-	return ser.invDal.GetAllInventory()
+func (ser *inventoryServiceDal) CollectInventories() ([]models.Inventory, error) {
+	return ser.invDal.SelectInventories()
 }
 
 func (ser *inventoryServiceDal) TakeInventory(id uint64) (*models.Inventory, error) {
@@ -46,18 +46,9 @@ func (ser *inventoryServiceDal) UpgradeInventory(inv *models.Inventory) error {
 	return ser.invDal.UpdateInventory(inv)
 }
 
-// func (ser *inventoryServiceDal) DeleteInventory(id string) error {
-// 	items, err := ser.dal.ReadInventory()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	for i, v := range items {
-// 		if v.IngredientID == id {
-// 			return ser.dal.WriteInventory(append(items[:i], items[i+1:]...))
-// 		}
-// 	}
-// 	return models.ErrNotFound
-// }
+func (ser *inventoryServiceDal) RemoveInventory(id uint64) (*models.InventoryDepend, error) {
+	return ser.invDal.DeleteInventory(id)
+}
 
 // func (ser *inventoryServiceDal) PutAllInvets(invents []models.InventoryItem) ([]string, error) {
 // 	items, err := ser.dal.ReadInventory()

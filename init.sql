@@ -28,13 +28,14 @@ CREATE TABLE menu_items (
     name VARCHAR(48) NOT NULL UNIQUE,
     description TEXT NOT NULL,
     tags TEXT [],
-    allergen TEXT [],
-    price DECIMAL(10, 2) NOT NULL DEFAULT 0 CHECK (price >= 0) --inventories TEXT[] NOT NULL CHECK (array_length(allergens, 1) > 0) --cardinality(allergens)>0
+    allergens TEXT [],
+    price DECIMAL(10, 2) NOT NULL CHECK (price >= 0) --inventories TEXT[] NOT NULL CHECK (array_length(allergens, 1) > 0) --cardinality(allergens)>0
 );
 
 CREATE TABLE menu_item_ingredients (
     product_id INT NOT NULL REFERENCES menu_items (id) ON DELETE CASCADE,
     inventory_id INT NOT NULL REFERENCES inventory (id),
+    -- FOREIGN KEY (inventory_id) REFERENCES inventory (id),
     quantity FLOAT NOT NULL CHECK (quantity > 0)
 );
 
@@ -54,7 +55,7 @@ CREATE TABLE orders (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     customer_name VARCHAR(64) NOT NULL,
     status order_status NOT NULL,
-    allergen TEXT [],
+    allergens TEXT [],
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP --NOW()
 );
@@ -90,14 +91,14 @@ CREATE INDEX idx_menu_items_description ON menu_items USING GIN (
 
 CREATE INDEX idx_menu_items_tags ON menu_items USING GIN (tags);
 
-CREATE INDEX idx_menu_items_allergen ON menu_items USING GIN (allergen);
+CREATE INDEX idx_menu_items_allergens ON menu_items USING GIN (allergens);
 
 --orders
 CREATE INDEX idx_orders_customer_name ON orders USING GIN (
     to_tsvector('english', customer_name)
 );
 
-CREATE INDEX idx_orders_allergen ON orders USING GIN (allergen);
+CREATE INDEX idx_orders_allergens ON orders USING GIN (allergens);
 
 --INSERT TO THE TABLE
 INSERT INTO
@@ -303,7 +304,7 @@ INSERT INTO
         name,
         description,
         tags,
-        allergen,
+        allergens,
         price
     )
 VALUES (
@@ -443,7 +444,7 @@ INSERT INTO
     orders (
         customer_name,
         status,
-        allergen,
+        allergens,
         created_at,
         updated_at
     )
