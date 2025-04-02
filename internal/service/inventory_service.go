@@ -3,8 +3,8 @@ package service
 import (
 	"errors"
 
-	"hot-coffee/internal/dal"
-	"hot-coffee/models"
+	"frappuccino/internal/dal"
+	"frappuccino/models"
 )
 
 type InventoryService interface {

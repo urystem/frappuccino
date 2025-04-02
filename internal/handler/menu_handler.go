@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"hot-coffee/internal/service"
+	"frappuccino/internal/service"
 )
 
 type menuHaldToService struct {

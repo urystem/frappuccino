@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"hot-coffee/internal/service"
+	"frappuccino/internal/service"
 )
 
 type ordHandToService struct {

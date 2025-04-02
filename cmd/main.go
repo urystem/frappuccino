@@ -7,7 +7,7 @@ import (
 	"net/http" // listen and serve
 	"os"       // Import the os package to access environment variables and other OS functions
 
-	"hot-coffee/internal/router" // for mux
+	"frappuccino/internal/router" // for mux
 
 	_ "github.com/jackc/pgx/v5/stdlib" // Import the pq PostgreSQL driver (side-effect import, it registers itself with database/sql)
 	"github.com/jmoiron/sqlx"

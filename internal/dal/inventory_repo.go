@@ -1,6 +1,8 @@
 package dal
 
-import "hot-coffee/models"
+import (
+	"frappuccino/models"
+)
 
 type InventoryDataAccess interface {
 	// InsertInventoryV1(*models.Inventory) error
@@ -62,6 +64,8 @@ func (core *dalCore) InsertInventoryV5(inv *models.Inventory) error {
 	if err != nil {
 		return err
 	}
+	// var ss any
+	
 	defer tx.Rollback()
 	// tx.QueryRowx также подходит
 	if err = tx.QueryRow(`
@@ -139,7 +143,7 @@ func (core *dalCore) UpdateInventory(inv *models.Inventory) error {
 		return err
 	}
 
-	res, err := tx.NamedExec(`
+	_, err = tx.NamedExec(`
 	UPDATE inventory
 		SET name = :name, description = :description, quantity = :quantity,
 		    reorder_level = :reorder_level, unit = :unit, price = :price
@@ -152,15 +156,14 @@ func (core *dalCore) UpdateInventory(inv *models.Inventory) error {
 	// сондықтан кестенің өзгерісін rowsAffected пен тексереміз
 	// егер айди бар болып, бірақ жаңа кестеден айырмасы жоқ болса да, rowsAffected =1 болады
 	// демек тек жоқ айдиде ғана 0 болады
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
+	// rowsAffected, err := res.RowsAffected()
+	// if err != nil {
+	// 	return err
+	// }
 
-	if rowsAffected == 0 {
-		return models.ErrNotFound
-	}
-
+	// if rowsAffected == 0 {
+	// 	return models.ErrNotFound
+	// }
 	quantity_changed = inv.Quantity - quantity_changed
 
 	reason := "restock"

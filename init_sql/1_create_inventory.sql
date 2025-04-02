@@ -23,8 +23,8 @@ CREATE TABLE inventory_transactions (
 );
 
 --INDEXING
-CREATE INDEX idx_inventory_name ON inventory USING GIN (to_tsvector('english', name));
+CREATE INDEX idx_inventory_name ON inventory USING GIN (to_tsvector ('english', name));
 
 CREATE INDEX idx_inventory_description ON inventory USING GIN (
-    to_tsvector('english', description)
+    to_tsvector ('english', description)
 );

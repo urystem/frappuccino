@@ -1,8 +1,8 @@
 package service
 
 import (
-	"hot-coffee/internal/dal"
-	"hot-coffee/models"
+	"frappuccino/internal/dal"
+	"frappuccino/models"
 )
 
 type menuServiceToDal struct {

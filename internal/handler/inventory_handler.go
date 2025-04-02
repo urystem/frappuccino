@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"hot-coffee/internal/service"
-	"hot-coffee/models"
+	"frappuccino/internal/service"
+	"frappuccino/models"
 )
 
 type inventoryHandler struct {

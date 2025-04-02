@@ -1,7 +1,7 @@
 package dal
 
 import (
-	"hot-coffee/models"
+	"frappuccino/models"
 )
 
 type OrderDalInter interface {

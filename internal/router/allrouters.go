@@ -3,9 +3,9 @@ package router
 import (
 	"net/http"
 
-	"hot-coffee/internal/dal"
-	"hot-coffee/internal/handler"
-	"hot-coffee/internal/service"
+	"frappuccino/internal/dal"
+	"frappuccino/internal/handler"
+	"frappuccino/internal/service"
 
 	"github.com/jmoiron/sqlx"
 )

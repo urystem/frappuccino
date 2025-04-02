@@ -2,8 +2,7 @@ package dal
 
 import (
 	"fmt"
-
-	"hot-coffee/models"
+	"frappuccino/models"
 )
 
 type MenuDalInter interface {
