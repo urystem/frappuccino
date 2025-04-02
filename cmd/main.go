@@ -9,7 +9,6 @@ import (
 
 	"hot-coffee/internal/router" // for mux
 
-	"github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/stdlib" // Import the pq PostgreSQL driver (side-effect import, it registers itself with database/sql)
 	"github.com/jmoiron/sqlx"
 )
@@ -23,50 +22,52 @@ func main() {
 		os.Getenv("DB_PORT"), // you can skip this env, if you use default posgresql port. 5432
 		os.Getenv("DB_NAME"))
 
-	db, err := sqlx.Open("pgx", dsn) // Attempt to set up the database connection
+	// sqlx.Open мен аййырмашылығы, опен тек ашады, бірақ байланыс дереу орнатпайды.
+	db, err := sqlx.Connect("pgx", dsn) // Attempt to set up the database connection
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err = db.Ping(); err != nil {
-		log.Fatal(err)
-	}
+	// it is for sqlx.Open
+	// if err = db.Ping(); err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	routes := router.Allrouter(db)
 
 	log.Fatal(http.ListenAndServe(":8080", routes))
 }
 
-func GetMenuItems(db *sqlx.DB) ([]MenuItem, error) {
-	query := `SELECT id, name, description, tags, allergens, price FROM menu_items`
-	rows, err := db.Queryx(query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+// func GetMenuItems(db *sqlx.DB) ([]MenuItem, error) {
+// 	query := `SELECT id, name, description, tags, allergens, price FROM menu_items`
+// 	rows, err := db.Queryx(query)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer rows.Close()
 
-	var menuItems []MenuItem
-	for rows.Next() {
-		var item MenuItem
-		var tags pgx.TextArray // 👈 Используем pgx.TextArray
-		var allergens pgx.TextArray
+// 	var menuItems []MenuItem
+// 	for rows.Next() {
+// 		var item MenuItem
+// 		var tags pgx.TextArray // 👈 Используем pgx.TextArray
+// 		var allergens pgx.TextArray
 
-		err := rows.Scan(
-			&item.ID,
-			&item.Name,
-			&item.Description,
-			&tags,      // 👈 pgx.TextArray автоматически конвертируется в []string
-			&allergens, // 👈 pgx.TextArray автоматически конвертируется в []string
-			&item.Price,
-		)
-		if err != nil {
-			return nil, err
-		}
+// 		err := rows.Scan(
+// 			&item.ID,
+// 			&item.Name,
+// 			&item.Description,
+// 			&tags,      // 👈 pgx.TextArray автоматически конвертируется в []string
+// 			&allergens, // 👈 pgx.TextArray автоматически конвертируется в []string
+// 			&item.Price,
+// 		)
+// 		if err != nil {
+// 			return nil, err
+// 		}
 
-		item.Tags = tags.Elements // 👈 Присваиваем []string
-		item.Allergens = allergens.Elements
-		menuItems = append(menuItems, item)
-	}
+// 		item.Tags = tags.Elements // 👈 Присваиваем []string
+// 		item.Allergens = allergens.Elements
+// 		menuItems = append(menuItems, item)
+// 	}
 
-	return menuItems, nil
-}
+// 	return menuItems, nil
+// }

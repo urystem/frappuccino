@@ -1,9 +1,9 @@
 package dal
 
 import (
-	"hot-coffee/models"
+	"fmt"
 
-	"github.com/lib/pq"
+	"hot-coffee/models"
 )
 
 type MenuDalInter interface {
@@ -20,8 +20,8 @@ func (core *dalCore) InsertMenu(menuItems *models.MenuItem) error {
 	insertMenuQ := `
 		INSERT INTO menu_items (name, description, tags, allergens, price)
 		VALUES ($1, $2, $3, $4, $5, $6)
-	RETURNING id
-	`
+	RETURNING id`
+
 	err = tx.QueryRow(insertMenuQ,
 		menuItems.Name,
 		menuItems.Description,
@@ -60,15 +60,14 @@ func (core *dalCore) SelectMenus() ([]models.MenuItem, error) {
 	if err != nil {
 		return nil, err
 	}
-	pq.Array()
-	pgx.Array()
 	defer tx.Rollback()
+	// var resArray pgtype.Array[string]
+	// s := resArray.Elements
 
 	err = tx.Select(&menus, `SELECT * FROM menu_items`)
 	if err != nil {
 		return nil, err
 	}
-
 	MenuIngsQ := `SELECT inventory_id, quantity FROM menu_item_ingredients WHERE product_id=:id`
 	stmt, err := tx.PrepareNamed(MenuIngsQ)
 	if err != nil {
@@ -81,5 +80,6 @@ func (core *dalCore) SelectMenus() ([]models.MenuItem, error) {
 		// menus[i].ID деп query ға $1 қоя салуға келмеді
 		stmt.Select(&menus[i].Ingredients, menus[i])
 	}
+	fmt.Println(menus)
 	return menus, tx.Commit()
 }

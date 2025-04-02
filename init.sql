@@ -27,7 +27,8 @@ CREATE TABLE menu_items (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name VARCHAR(48) NOT NULL UNIQUE,
     description TEXT NOT NULL,
-    tags TEXT [],
+    tags text [] NOT NULL DEFAULT '{}'::text [], --::text[] деген '{}' ді массив қалады
+    --tags VARCHAR(128)[],
     allergens TEXT [],
     price DECIMAL(10, 2) NOT NULL CHECK (price >= 0) --inventories TEXT[] NOT NULL CHECK (array_length(allergens, 1) > 0) --cardinality(allergens)>0
 );
@@ -311,7 +312,7 @@ VALUES (
         'Espresso',
         'Rich and bold espresso shot',
         ARRAY['coffee'],
-        ARRAY['none'],
+        ARRAY[],
         3.00
     ),
     (
@@ -332,7 +333,7 @@ VALUES (
         'Honey Oatmeal',
         'Warm oatmeal sweetened with organic honey',
         ARRAY['breakfast', 'healthy'],
-        ARRAY['none'],
+        ARRAY[],
         6.00
     ),
     (
@@ -465,7 +466,7 @@ VALUES (
     (
         'Charlie Brown',
         'rejected',
-        ARRAY['none'],
+        ARRAY[],
         '2024-01-15',
         '2024-01-16'
     ),
@@ -479,7 +480,7 @@ VALUES (
     (
         'Emma Davis',
         'accepted',
-        ARRAY['none'],
+        ARRAY[],
         '2024-01-25',
         '2024-01-26'
     ),
@@ -500,7 +501,7 @@ VALUES (
     (
         'Henry Moore',
         'rejected',
-        ARRAY['none'],
+        ARRAY[],
         '2024-02-14',
         '2024-02-15'
     ),
@@ -514,7 +515,7 @@ VALUES (
     (
         'Jack Taylor',
         'accepted',
-        ARRAY['none'],
+        ARRAY[],
         '2024-02-25',
         '2024-02-26'
     ),
