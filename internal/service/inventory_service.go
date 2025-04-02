@@ -32,7 +32,7 @@ func (ser *inventoryServiceDal) CreateInventory(inv *models.Inventory) error {
 }
 
 func (ser *inventoryServiceDal) CollectInventories() ([]models.Inventory, error) {
-	return ser.invDal.SelectInventories()
+	return ser.invDal.SelectAllInventories()
 }
 
 func (ser *inventoryServiceDal) TakeInventory(id uint64) (*models.Inventory, error) {

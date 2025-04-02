@@ -1,6 +1,8 @@
 package service
 
 import (
+	"errors"
+
 	"frappuccino/internal/dal"
 	"frappuccino/models"
 )
@@ -10,51 +12,35 @@ type menuServiceToDal struct {
 }
 
 type MenuServiceInter interface {
-	// CreateMenu(*models.MenuItem) ([]string, error)
+	CreateMenu(*models.MenuItem) ([]uint64, error)
 	CollectMenus() ([]models.MenuItem, error)
-	// GetServiceMenuById(string) (*models.MenuItem, error)
+	TakeMenu(uint64) (*models.MenuItem, error)
+	DelServiceMenuById(uint64) (*models.MenuDepend, error)
 	// PutServiceMenuById(*models.MenuItem, string) ([]string, error)
-	// DelServiceMenuById(string) error
 }
 
 func ReturnMenuSerStruct(interMenuDal dal.MenuDalInter) *menuServiceToDal {
 	return &menuServiceToDal{menuDal: interMenuDal}
 }
 
-// func (ser *menuServiceToDal) CreateMenu(menu *models.MenuItem) ([]string, error) {
-// 	if ings, err := ser.checkNotFoundIngs(menu.Ingredients); err != nil {
-// 		return nil, err
-// 	} else if len(ings) != 0 {
-// 		return ings, models.ErrNotFoundIngs
-// 	}
-// 	menus, err := ser.menuDalInt.ReadMenuDal()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	for _, v := range menus {
-// 		if v.ID == menu.ID {
-// 			return nil, models.ErrConflict
-// 		}
-// 	}
-// 	return nil, ser.menuDalInt.WriteMenuDal(append(menus, *menu))
-// }
-
-func (ser *menuServiceToDal) CollectMenus() ([]models.MenuItem, error) {
-	return ser.menuDal.SelectMenus()
+func (ser *menuServiceToDal) CreateMenu(menu *models.MenuItem) ([]uint64, error) {
+	if isInvalidName(menu.Name){
+		return nil, errors.New("ff")
+	}
+	return ser.menuDal.InsertMenu(menu)
 }
 
-// func (ser *menuServiceToDal) GetServiceMenuById(id string) (*models.MenuItem, error) {
-// 	menus, err := ser.menuDalInt.ReadMenuDal()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	for _, v := range menus {
-// 		if v.ID == id {
-// 			return &v, nil
-// 		}
-// 	}
-// 	return nil, models.ErrNotFound
-// }
+func (ser *menuServiceToDal) CollectMenus() ([]models.MenuItem, error) {
+	return ser.menuDal.SelectAllMenus()
+}
+
+func (ser *menuServiceToDal) TakeMenu(id uint64) (*models.MenuItem, error) {
+	return ser.menuDal.SelectMenu(id)
+}
+
+func (ser *menuServiceToDal) DelServiceMenuById(id uint64) (*models.MenuDepend, error) {
+	return ser.menuDal.DeleteMenu(id)
+}
 
 // func (ser *menuServiceToDal) PutServiceMenuById(menu *models.MenuItem, id string) ([]string, error) {
 // 	if ings, err := ser.checkNotFoundIngs(menu.Ingredients); err != nil {
@@ -74,19 +60,6 @@ func (ser *menuServiceToDal) CollectMenus() ([]models.MenuItem, error) {
 // 		}
 // 	}
 // 	return nil, models.ErrNotFound
-// }
-
-// func (ser *menuServiceToDal) DelServiceMenuById(id string) error {
-// 	menus, err := ser.menuDalInt.ReadMenuDal()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	for i, v := range menus {
-// 		if v.ID == id {
-// 			return ser.menuDalInt.WriteMenuDal(append(menus[:i], menus[i+1:]...))
-// 		}
-// 	}
-// 	return models.ErrNotFound
 // }
 
 // func (ser *menuServiceToDal) checkNotFoundIngs(itemsToCheck []models.MenuItemIngredient) ([]string, error) {
@@ -109,3 +82,10 @@ func (ser *menuServiceToDal) CollectMenus() ([]models.MenuItem, error) {
 // 	}
 // 	return notFoundIngs, nil
 // }
+
+func checkMenuStruct(menu models.MenuItem) error {
+	if isInvalidName(menu.Name) {
+		return errors.New("invalid name")
+	}
+	if 
+}

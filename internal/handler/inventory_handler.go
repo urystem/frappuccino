@@ -60,7 +60,7 @@ func (handl *inventoryHandler) GetInventories(w http.ResponseWriter, r *http.Req
 	slog.Info("Get", "inventories:", "succes")
 }
 
-func (handl *inventoryHandler) GetInventory(w http.ResponseWriter, r *http.Request) {
+func (handl *inventoryHandler) GetInventoryByID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(r.PathValue("id"), 10, 0)
 	if err != nil {
 		slog.Error("Get invent by id: ", "failed", err)
@@ -140,12 +140,11 @@ func (handl *inventoryHandler) DeleteInventory(w http.ResponseWriter, r *http.Re
 	}
 
 	if menus != nil {
+		slog.Error("DELETE Invent: found depend menus")
 		err = bodyJsonStruct(w, menus, http.StatusBadRequest)
 		if err != nil {
 			slog.Error("DELETE Invent: Error in decoder")
-			return
 		}
-		slog.Error("DELETE Invent: found depend menus")
 		return
 	}
 	slog.Info("Deleted invent", "id", id)

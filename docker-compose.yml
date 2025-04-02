@@ -13,15 +13,17 @@ services:
       db:
         condition: service_healthy
   db:
+    ports:
+      - 5432:5432
     image: postgres:alpine
     environment:
       - POSTGRES_USER=latte
       - POSTGRES_PASSWORD=latte
       - POSTGRES_DB=frappuccino
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - 5432:5432
+      - ./db/1_inventory.sql:/docker-entrypoint-initdb.d/1_inventory.sql
+      - ./db/2_menu.sql:/docker-entrypoint-initdb.d/2_menu.sql
+      - ./db/3_order.sql:/docker-entrypoint-initdb.d/3_order.sql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U latte -d frappuccino" ]
       # test: [ "CMD-SHELL", "pg_isready -h someremotehost" ]

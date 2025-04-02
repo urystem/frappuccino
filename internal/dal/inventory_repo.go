@@ -11,7 +11,7 @@ type InventoryDataAccess interface {
 	// InsertInventoryV4(*models.Inventory) error
 	InsertInventoryV5(*models.Inventory) error
 	// InsertInventoryV6(*models.Inventory) error
-	SelectInventories() ([]models.Inventory, error)
+	SelectAllInventories() ([]models.Inventory, error)
 	SelectInventory(uint64) (*models.Inventory, error)
 	UpdateInventory(*models.Inventory) error
 	DeleteInventory(uint64) (*models.InventoryDepend, error)
@@ -119,7 +119,7 @@ func (core *dalCore) InsertInventoryV6(inv *models.Inventory) error {
 	return tx.Commit()
 }
 
-func (core *dalCore) SelectInventories() ([]models.Inventory, error) {
+func (core *dalCore) SelectAllInventories() ([]models.Inventory, error) {
 	var invts []models.Inventory
 	err := core.db.Select(&invts, "SELECT * FROM inventory")
 	return invts, err

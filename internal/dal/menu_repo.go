@@ -1,16 +1,17 @@
 package dal
 
 import (
-	"fmt"
 	"frappuccino/models"
 )
 
 type MenuDalInter interface {
-	InsertMenu(*models.MenuItem) error       // Write
-	SelectMenus() ([]models.MenuItem, error) // Read
+	InsertMenu(*models.MenuItem) error
+	SelectAllMenus() ([]models.MenuItem, error)
+	SelectMenu(uint64) (*models.MenuItem, error)
+	DeleteMenu(uint64) (*models.MenuDepend, error)
 }
 
-func (core *dalCore) InsertMenu(menuItems *models.MenuItem) error {
+func (core *dalCore) InsertMenu(menuItems *models.MenuItem) ([]uint64, error) {
 	tx, err := core.db.Beginx()
 	if err != nil {
 		return err
@@ -18,7 +19,7 @@ func (core *dalCore) InsertMenu(menuItems *models.MenuItem) error {
 	defer tx.Rollback()
 	insertMenuQ := `
 		INSERT INTO menu_items (name, description, tags, allergens, price)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		VALUES ($1, $2, $3, $4, $5)
 	RETURNING id`
 
 	err = tx.QueryRow(insertMenuQ,
@@ -32,8 +33,7 @@ func (core *dalCore) InsertMenu(menuItems *models.MenuItem) error {
 	}
 	insert1MenuIngQ := `
 		INSERT INTO menu_item_ingredients
-		VALUES(:product_id, :inventory_id, :quantity)
-	`
+		VALUES(:product_id, :inventory_id, :quantity)`
 
 	// егер запрос көп болса PrepareNamed дұрыс
 	// ал 1 еу ғана бола NamedExec дұрыс
@@ -53,7 +53,7 @@ func (core *dalCore) InsertMenu(menuItems *models.MenuItem) error {
 	return tx.Commit()
 }
 
-func (core *dalCore) SelectMenus() ([]models.MenuItem, error) {
+func (core *dalCore) SelectAllMenus() ([]models.MenuItem, error) {
 	var menus []models.MenuItem
 	tx, err := core.db.Beginx()
 	if err != nil {
@@ -67,8 +67,8 @@ func (core *dalCore) SelectMenus() ([]models.MenuItem, error) {
 	if err != nil {
 		return nil, err
 	}
-	MenuIngsQ := `SELECT inventory_id, quantity FROM menu_item_ingredients WHERE product_id=:id`
-	stmt, err := tx.PrepareNamed(MenuIngsQ)
+
+	stmt, err := tx.PrepareNamed(`SELECT inventory_id, quantity FROM menu_item_ingredients WHERE product_id=:id`)
 	if err != nil {
 		return nil, err
 	}
@@ -79,6 +79,67 @@ func (core *dalCore) SelectMenus() ([]models.MenuItem, error) {
 		// menus[i].ID деп query ға $1 қоя салуға келмеді
 		stmt.Select(&menus[i].Ingredients, menus[i])
 	}
-	fmt.Println(menus)
 	return menus, tx.Commit()
+}
+
+func (core *dalCore) SelectMenu(id uint64) (*models.MenuItem, error) {
+	tx, err := core.db.Beginx()
+	if err != nil {
+		return nil, err
+	}
+
+	defer tx.Rollback()
+
+	var menu models.MenuItem
+
+	err = tx.Get(&menu, `SELECT * FROM menu_items WHERE id=$1`, id)
+	if err != nil {
+		return nil, err
+	}
+
+	err = tx.Select(&menu.Ingredients, `SELECT * FROM menu_item_ingredients WHERE product_id=$1`, id)
+	if err != nil {
+		return nil, err
+	}
+	return &menu, tx.Commit()
+}
+
+func (core *dalCore) DeleteMenu(id uint64) (*models.MenuDepend, error) {
+	tx, err := core.db.Beginx()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	query := `
+	SELECT order_id, customer_name 
+		FROM order_items 
+		JOIN orders ON order_id=id 
+		WHERE status <> 'processing' AND product_id=$1`
+
+	var menuDepend models.MenuDepend
+	err = tx.Select(&menuDepend.Orders, query, id)
+	if err != nil {
+		return nil, err
+	}
+	if len(menuDepend.Orders) != 0 {
+		menuDepend.Err = "found depends"
+		return &menuDepend, nil
+	}
+
+	res, err := tx.Exec(`DELETE from menu_items WHERE id=$1`, id)
+	if err != nil {
+		return nil, err
+	}
+
+	affects, err := res.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+
+	if affects == 0 {
+		return nil, models.ErrNotFound
+	}
+
+	return nil, tx.Commit()
 }

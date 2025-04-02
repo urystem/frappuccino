@@ -3,8 +3,10 @@ package handler
 import (
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"frappuccino/internal/service"
+	"frappuccino/models"
 )
 
 type menuHaldToService struct {
@@ -13,6 +15,79 @@ type menuHaldToService struct {
 
 func ReturnMenuHaldStruct(menuSerInt service.MenuServiceInter) *menuHaldToService {
 	return &menuHaldToService{menuServInt: menuSerInt}
+}
+
+func (handMenu *menuHaldToService) GetMenus(w http.ResponseWriter, r *http.Request) {
+	menus, err := handMenu.menuServInt.CollectMenus()
+	if err != nil {
+		slog.Error("Error getting all menus", "error", err)
+		writeHttp(w, http.StatusInternalServerError, "get all", err.Error())
+		return
+	}
+
+	err = bodyJsonStruct(w, menus, http.StatusOK)
+	if err != nil {
+		slog.Error("Get menus: cannot give body all menus")
+		return
+	}
+
+	slog.Info("Get all menu list")
+}
+
+func (handMenu *menuHaldToService) GetMenuByID(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(r.PathValue("id"), 10, 0)
+	if err != nil {
+		slog.Error("Get Menu: invalid id")
+		writeHttp(w, http.StatusBadRequest, "ID", "Invalid id")
+		return
+	}
+
+	menu, err := handMenu.menuServInt.TakeMenu(id)
+	if err != nil {
+		slog.Error("Get Menu: cannot get menu struct", "error", err)
+		if err == models.ErrNotFound {
+			writeHttp(w, http.StatusNotFound, "menu", err.Error())
+		} else {
+			writeHttp(w, http.StatusInternalServerError, "get menu by id", err.Error())
+		}
+		return
+	}
+
+	if err = bodyJsonStruct(w, menu, http.StatusOK); err != nil {
+		slog.Error("Get menu: cannot write struct to the body")
+	}
+}
+
+func (handMenu *menuHaldToService) DelMenu(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(r.PathValue("id"), 10, 0)
+	if err != nil {
+		slog.Error("Del Menu:", "invalid id", err)
+		writeHttp(w, http.StatusBadRequest, "ID", "Invalid id")
+		return
+	}
+
+	menuDepends, err := handMenu.menuServInt.DelServiceMenuById(id)
+	if err != nil {
+		if err == models.ErrNotFound {
+			slog.Error("Delete menu :", "by id", err)
+			writeHttp(w, http.StatusNotFound, "menu", err.Error())
+		} else {
+			slog.Error("Delete menu by id", "unknown error", err)
+			writeHttp(w, http.StatusInternalServerError, "delete menu", err.Error())
+		}
+		return
+	}
+	if menuDepends != nil {
+		slog.Error("DELETE menu: found depend orders")
+		err = bodyJsonStruct(w, menuDepends, http.StatusBadRequest)
+		if err != nil {
+			slog.Error("DELETE Invent: Error in decoder")
+		}
+		return
+	}
+
+	slog.Info("Deleted: ", " menu by id :", id)
+	writeHttp(w, http.StatusNoContent, "", "")
 }
 
 // func (h *menuHaldToService) PostMenu(w http.ResponseWriter, r *http.Request) {
@@ -38,39 +113,6 @@ func ReturnMenuHaldStruct(menuSerInt service.MenuServiceInter) *menuHaldToServic
 // 	} else {
 // 		// slog.Info("menu created: " + menuStruct.ID)
 // 		// writeHttp(w, http.StatusCreated, "success", "menu created: "+menuStruct.ID)
-// 	}
-// }
-
-func (handMenu *menuHaldToService) GetMenus(w http.ResponseWriter, r *http.Request) {
-	menus, err := handMenu.menuServInt.CollectMenus()
-	if err != nil {
-		slog.Error("Error getting all menus", "error", err)
-		writeHttp(w, http.StatusInternalServerError, "get all", err.Error())
-		return
-	}
-
-	err = bodyJsonStruct(w, menus, http.StatusOK)
-	if err != nil {
-		slog.Error("Get menus: cannot give body all menus")
-		return
-	}
-
-	slog.Info("Get all menu list")
-}
-
-// func (h *menuHaldToService) GetMenuById(w http.ResponseWriter, r *http.Request) {
-// 	if idname := r.PathValue("id"); checkName(idname) {
-// 		slog.Error("Get Menu: invalid id")
-// 		writeHttp(w, http.StatusBadRequest, "ID", "Invalid id")
-// 	} else if menu, err := h.menuServInt.GetServiceMenuById(idname); err != nil {
-// 		slog.Error("Get Menu: cannot get menu struct", "error", err)
-// 		if err == models.ErrNotFound {
-// 			writeHttp(w, http.StatusNotFound, "menu", err.Error())
-// 		} else {
-// 			writeHttp(w, http.StatusInternalServerError, "get menu by id", err.Error())
-// 		}
-// 	} else if err = bodyJsonStruct(w, menu, http.StatusOK); err != nil {
-// 		slog.Error("Get menu: cannot write struct to the body")
 // 	}
 // }
 
@@ -100,24 +142,6 @@ func (handMenu *menuHaldToService) GetMenus(w http.ResponseWriter, r *http.Reque
 // 	} else {
 // 		slog.Info("Menu: ", "Updated Menu by id: ", id)
 // 		writeHttp(w, http.StatusOK, "Updated Menu by id: ", id)
-// 	}
-// }
-
-// func (h *menuHaldToService) DelMenuById(w http.ResponseWriter, r *http.Request) {
-// 	if idname := r.PathValue("id"); checkName(idname) {
-// 		slog.Error("Del Menu: invalid id")
-// 		writeHttp(w, http.StatusBadRequest, "ID", "Invalid id")
-// 	} else if err := h.menuServInt.DelServiceMenuById(idname); err != nil {
-// 		if err == models.ErrNotFound {
-// 			slog.Error("Delete menu by id:", idname, err)
-// 			writeHttp(w, http.StatusNotFound, "menu", err.Error())
-// 		} else {
-// 			slog.Error("Delete menu by id", "unknown error", err)
-// 			writeHttp(w, http.StatusInternalServerError, "delete menu", err.Error())
-// 		}
-// 	} else {
-// 		slog.Info("Deleted: ", " menu by id :", idname)
-// 		writeHttp(w, http.StatusNoContent, "", "")
 // 	}
 // }
 
