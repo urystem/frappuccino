@@ -36,7 +36,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	defer db.Close()
 	// it is for sqlx.Open
 	// if err = db.Ping(); err != nil {
 	// 	log.Fatal(err)

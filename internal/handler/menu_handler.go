@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -90,31 +91,35 @@ func (handMenu *menuHaldToService) DelMenu(w http.ResponseWriter, r *http.Reques
 	writeHttp(w, http.StatusNoContent, "", "")
 }
 
-// func (h *menuHaldToService) PostMenu(w http.ResponseWriter, r *http.Request) {
-// 	var menuStruct models.MenuItem
-// 	if r.Header.Get("Content-Type") != "application/json" {
-// 		slog.Error("post the menu: content_Type must be application/json")
-// 		writeHttp(w, http.StatusBadRequest, "content/type", "not json")
-// 	} else if err := json.NewDecoder(r.Body).Decode(&menuStruct); err != nil {
-// 		slog.Error("incorrect input to post menu", "error", err)
-// 		writeHttp(w, http.StatusBadRequest, "input json", err.Error())
-// 	} else if err = checkMenuStruct(menuStruct, true); err != nil {
-// 		slog.Error("Invalid Post menu struct: ", "error", err)
-// 		writeHttp(w, http.StatusBadRequest, "invalid struct of input json", err.Error())
-// 	} else if ings, err := h.menuServInt.PostServiceMenu(&menuStruct); err != nil {
-// 		slog.Error("Post menu", "error", err)
-// 		if err == models.ErrConflict {
-// 			writeHttp(w, http.StatusConflict, "menu", err.Error())
-// 		} else if err == models.ErrNotFoundIngs {
-// 			writeHttp(w, http.StatusNotFound, "inventory ", strings.Join(ings, ", ")+err.Error())
-// 		} else {
-// 			writeHttp(w, http.StatusInternalServerError, "error post menu", err.Error())
-// 		}
-// 	} else {
-// 		// slog.Info("menu created: " + menuStruct.ID)
-// 		// writeHttp(w, http.StatusCreated, "success", "menu created: "+menuStruct.ID)
-// 	}
-// }
+func (h *menuHaldToService) PostMenu(w http.ResponseWriter, r *http.Request) {
+	var menuStruct models.MenuItem
+	if r.Header.Get("Content-Type") != "application/json" {
+		slog.Error("post the menu: content_Type must be application/json")
+		writeHttp(w, http.StatusBadRequest, "content/type", "not json")
+		return
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&menuStruct); err != nil {
+		slog.Error("incorrect input to post menu", "error", err)
+		writeHttp(w, http.StatusBadRequest, "input json", err.Error())
+		return
+	}
+
+	if ings, err := h.menuServInt.CreateMenu(&menuStruct); err != nil {
+		slog.Error("Post menu", "error", err)
+		if err == models.InvalidIngs {
+			err = bodyJsonStruct(w, ings, http.StatusBadRequest)
+			if err != nil {
+				slog.Error("DELETE Invent: Error in decoder")
+			}
+			return
+		}
+		writeHttp(w, http.StatusInternalServerError, "error post menu", err.Error())
+		return
+	}
+	slog.Info("menu created: ", "success", menuStruct.ID)
+	writeHttp(w, http.StatusCreated, "success", "menu created:")
+}
 
 // func (h *menuHaldToService) PutMenuById(w http.ResponseWriter, r *http.Request) {
 // 	var menuStruct models.MenuItem

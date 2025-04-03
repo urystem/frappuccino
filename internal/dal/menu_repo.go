@@ -1,20 +1,24 @@
 package dal
 
 import (
+	"fmt"
+
 	"frappuccino/models"
+
+	"github.com/lib/pq"
 )
 
 type MenuDalInter interface {
-	InsertMenu(*models.MenuItem) error
+	InsertMenu(*models.MenuItem) ([]models.MenuIngredients, error)
 	SelectAllMenus() ([]models.MenuItem, error)
 	SelectMenu(uint64) (*models.MenuItem, error)
 	DeleteMenu(uint64) (*models.MenuDepend, error)
 }
 
-func (core *dalCore) InsertMenu(menuItems *models.MenuItem) ([]uint64, error) {
+func (core *dalCore) InsertMenu(menuItems *models.MenuItem) ([]models.MenuIngredients, error) {
 	tx, err := core.db.Beginx()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback()
 	insertMenuQ := `
@@ -29,7 +33,7 @@ func (core *dalCore) InsertMenu(menuItems *models.MenuItem) ([]uint64, error) {
 		menuItems.Allergens,
 		menuItems.Price).Scan(&menuItems.ID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	insert1MenuIngQ := `
 		INSERT INTO menu_item_ingredients
@@ -39,18 +43,33 @@ func (core *dalCore) InsertMenu(menuItems *models.MenuItem) ([]uint64, error) {
 	// ал 1 еу ғана бола NamedExec дұрыс
 	stmt, err := tx.PrepareNamed(insert1MenuIngQ)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer stmt.Close()
-
+	var invalidCount uint64
 	for _, v := range menuItems.Ingredients {
 		v.ProductID = menuItems.ID
 		_, err = stmt.Exec(v)
 		if err != nil {
-			return err
+			if pqErr, ok := err.(*pq.Error); ok {
+				// егер ошибка айди табылмағандықтапн болса, сол жаққа жинай береміз
+				if pqErr.Code == "23503" {
+					v.Err = "not found"
+					menuItems.Ingredients[invalidCount] = v
+					invalidCount++
+					fmt.Println("ddd")
+					continue
+				}
+			}
+			return nil, err
 		}
 	}
-	return tx.Commit()
+
+	// егер табылмаған айдилар болса
+	if invalidCount != 0 {
+		return menuItems.Ingredients[:invalidCount], models.ErrNotFound
+	}
+	return nil, tx.Commit()
 }
 
 func (core *dalCore) SelectAllMenus() ([]models.MenuItem, error) {

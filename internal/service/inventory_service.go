@@ -25,7 +25,7 @@ func NewInventoryService(dalInter dal.InventoryDataAccess) *inventoryServiceDal 
 }
 
 func (ser *inventoryServiceDal) CreateInventory(inv *models.Inventory) error {
-	if err := checkInventStruct(inv); err != nil {
+	if err := ser.checkInventStruct(inv); err != nil {
 		return err
 	}
 	return ser.invDal.InsertInventoryV5(inv)
@@ -40,7 +40,7 @@ func (ser *inventoryServiceDal) TakeInventory(id uint64) (*models.Inventory, err
 }
 
 func (ser *inventoryServiceDal) UpgradeInventory(inv *models.Inventory) error {
-	if err := checkInventStruct(inv); err != nil {
+	if err := ser.checkInventStruct(inv); err != nil {
 		return err
 	}
 	return ser.invDal.UpdateInventory(inv)
@@ -79,7 +79,7 @@ func (ser *inventoryServiceDal) RemoveInventory(id uint64) (*models.InventoryDep
 // 	return nil, nil
 // }
 
-func checkInventStruct(inv *models.Inventory) error {
+func (ser *inventoryServiceDal) checkInventStruct(inv *models.Inventory) error {
 	if isInvalidName(inv.Name) {
 		return errors.New("invalid name")
 	} else if inv.Quantity < 0 {

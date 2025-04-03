@@ -5,17 +5,20 @@ import (
 )
 
 type MenuItem struct {
-	ID          uint64         `json:"product_id" db:"id" `
-	Name        string         `json:"name" db:"name"`
-	Description string         `json:"description" db:"description"`
-	Tags        pq.StringArray `json:"tags" db:"tags"`           /*pgtype.Array[string]*/
-	Allergens   pq.StringArray `json:"allergens" db:"allergens"` /*pgtype.Array[string]*/
-	Price       float64        `json:"price" db:"price"`
-	Ingredients []struct {
-		ProductID   uint64  `json:"-" db:"product_id"`
-		InventoryID uint64  `json:"inventory_id" db:"inventory_id"`
-		Quantity    float64 `json:"quantity" db:"quantity"`
-	} `json:"ingredients"`
+	ID          uint64            `json:"product_id" db:"id" `
+	Name        string            `json:"name" db:"name"`
+	Description string            `json:"description" db:"description"`
+	Tags        pq.StringArray    `json:"tags" db:"tags"`           /*pgtype.Array[string]*/
+	Allergens   pq.StringArray    `json:"allergens" db:"allergens"` /*pgtype.Array[string]*/
+	Price       float64           `json:"price" db:"price"`
+	Ingredients []MenuIngredients `json:"ingredients"`
+}
+
+type MenuIngredients struct {
+	Err         string  `json:"error"`
+	ProductID   uint64  `json:"-" db:"product_id"`
+	InventoryID uint64  `json:"inventory_id" db:"inventory_id"`
+	Quantity    float64 `json:"quantity" db:"quantity"`
 }
 
 type MenuDepend struct {
@@ -24,4 +27,9 @@ type MenuDepend struct {
 		Order_id      uint64 `json:"order_id" db:"order_id"`
 		Customer_name string `json:"customer_name" db:"customer_name"`
 	} `json:"orders"`
+}
+
+type InvalidIngredients struct {
+	Err             string
+	iIngredients_id map[uint64]float64
 }
