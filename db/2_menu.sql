@@ -37,7 +37,7 @@ CREATE INDEX idx_menu_items_tags ON menu_items USING GIN (tags);
 
 CREATE INDEX idx_menu_items_allergens ON menu_items USING GIN (allergens);
 
-CREATE OR REPLACE FUNCTION record_price_change()
+CREATE /*OR REPLACE*/ FUNCTION record_price_change()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Проверяем, если цена изменилась
@@ -179,21 +179,21 @@ VALUES (1, 1, 30), -- Espresso -> Espresso Beans
     (10, 6, 1), -- Almond Croissant -> Eggs
     (10, 20, 30);
 
-INSERT INTO
-    price_history (
-        product_id,
-        old_price,
-        new_price,
-        updated_at
-    )
-VALUES (1, 2.80, 3.00, '2024-01-10'),
-    (2, 4.30, 4.50, '2024-01-12'),
-    (3, 4.80, 5.00, '2024-02-01'),
-    (4, 5.80, 6.00, '2024-03-18'),
-    (5, 6.80, 7.00, '2024-04-25'),
-    (6, 4.30, 4.50, '2024-05-05'),
-    (7, 6.20, 6.50, '2024-03-30'),
-    (8, 5.30, 5.50, '2024-03-14'),
-    (9, 7.20, 7.50, '2024-04-22'),
-    (10, 5.80, 6.00, '2024-11-28');
+-- INSERT INTO
+--     price_history (
+--         product_id,
+--         old_price,
+--         new_price,
+--         updated_at
+--     )
+-- VALUES (1, 2.80, 3.00, '2024-01-10'),
+--     (2, 4.30, 4.50, '2024-01-12'),
+--     (3, 4.80, 5.00, '2024-02-01'),
+--     (4, 5.80, 6.00, '2024-03-18'),
+--     (5, 6.80, 7.00, '2024-04-25'),
+--     (6, 4.30, 4.50, '2024-05-05'),
+--     (7, 6.20, 6.50, '2024-03-30'),
+--     (8, 5.30, 5.50, '2024-03-14'),
+--     (9, 7.20, 7.50, '2024-04-22'),
+--     (10, 5.80, 6.00, '2024-11-28');
 

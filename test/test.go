@@ -36,9 +36,7 @@
 
 package main
 
-import (
-	"fmt"
-)
+import "fmt"
 
 type MenuIngredients struct {
 	InventoryID uint64  `json:"inventory_id" db:"inventory_id"`
@@ -47,39 +45,9 @@ type MenuIngredients struct {
 }
 
 func main() {
-	// Пример слайса MenuIngredients
-	menu := struct {
-		Ingredients []MenuIngredients
-	}{
-		Ingredients: []MenuIngredients{
-			{InventoryID: 101, Quantity: 10},
-			{InventoryID: 102, Quantity: 5},
-			{InventoryID: 103, Quantity: 7},
-			{InventoryID: 104, Quantity: 3},
-		},
-	}
-
-	// Мапа с некорректными inventory_id
-	invalids := map[uint64]struct{}{
-		102: {},
-	}
-
-	// "Ленивое удаление" с сдвигом влево
-	validCount := 0
-	for i := range menu.Ingredients {
-		ing := menu.Ingredients[i]
-		if _, x := invalids[ing.InventoryID]; x {
-			if ing.Err == "" {
-				ing.Err = "Duplicated"
-			}
-			menu.Ingredients[validCount] = ing
-			validCount++
-		}
-	}
-
-	// Устанавливаем новую длину слайса
-	menu.Ingredients = menu.Ingredients[:validCount]
-
-	// Выводим результат
-	fmt.Println(menu.Ingredients)
+	var str *string
+	str = new(string)
+	fmt.Println(*str)
+	// *str = "ddd"
+	// fmt.Println(*str) // выводим значение, на которое указывает str
 }
