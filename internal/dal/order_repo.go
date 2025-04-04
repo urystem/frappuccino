@@ -5,14 +5,10 @@ import (
 )
 
 type OrderDalInter interface {
-	WriteOrderDal([]models.Order) error     // Write
-	ReadOrdersDal() ([]models.Order, error) // Read
+	SelectAllOrders() ([]models.Order, error)
+	// SelectOrder(uint64) (*models.Order, error)
 }
 
-func (h *dalCore) ReadOrdersDal() ([]models.Order, error) {
+func (core *dalCore) SelectAllOrders() ([]models.Order, error) {
 	return nil, nil
-}
-
-func (h *dalCore) WriteOrderDal(ords []models.Order) error {
-	return nil
 }

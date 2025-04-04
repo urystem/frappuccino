@@ -1,10 +1,14 @@
 package models
 
+import "github.com/lib/pq"
+
 type Order struct {
-	ID           string      `json:"order_id"`
-	CustomerName string      `json:"customer_name"`
+	ID           string `json:"order_id"`
+	CustomerName string `json:"customer_name"`
+	Status       string `json:"status"`
+	Allergens    pq.StringArray
+	// total 
 	Items        []OrderItem `json:"items"`
-	Status       string      `json:"status"`
 	CreatedAt    string      `json:"created_at"`
 }
 

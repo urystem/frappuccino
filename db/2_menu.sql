@@ -17,24 +17,44 @@ CREATE TABLE menu_item_ingredients (
 );
 
 CREATE TABLE price_history (
-    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    -- id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     product_id INT NOT NULL REFERENCES menu_items (id) ON DELETE CASCADE,
     old_price DECIMAL(10, 2) NOT NULL CHECK (old_price >= 0),
     new_price DECIMAL(10, 2) NOT NULL CHECK (new_price >= 0),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP --NOW()
 );
 
+--INDEXING
 CREATE INDEX idx_menu_items_name ON menu_items USING GIN (to_tsvector('english', name));
 
 CREATE INDEX idx_menu_items_description ON menu_items USING GIN (
     to_tsvector('english', description)
 );
 
---INDEXING
+
 
 CREATE INDEX idx_menu_items_tags ON menu_items USING GIN (tags);
 
 CREATE INDEX idx_menu_items_allergens ON menu_items USING GIN (allergens);
+
+CREATE OR REPLACE FUNCTION record_price_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Проверяем, если цена изменилась
+    IF NEW.price <> OLD.price THEN
+        -- Вставляем запись в таблицу price_history
+        INSERT INTO price_history (product_id, old_price, new_price)
+        VALUES (NEW.id, OLD.price, NEW.price);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER price_update_trigger
+AFTER UPDATE OF price
+ON menu_items
+FOR EACH ROW
+EXECUTE FUNCTION record_price_change();
 
 
 --MENU

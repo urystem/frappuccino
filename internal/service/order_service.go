@@ -12,22 +12,22 @@ type ordServiceToDal struct {
 }
 
 type OrdServiceInter interface {
-	GetServiceOrders() ([]models.Order, error)
-	PostServiceOrder(*models.Order) ([]string, error)
-	GetServiceOrdById(string) (*models.Order, error)
-	PutServiceOrdById(*models.Order, string) ([]string, error)
-	DelServiceOrdById(string) error
-	PostServiseOrdCloseById(string) error
-	GetServiseTotalSales() (float64, error)
-	GetServicePopularItem() ([]models.OrderItem, error)
+	CollectOrders() ([]models.Order, error)
+	// PostServiceOrder(*models.Order) ([]string, error)
+	// GetServiceOrdById(string) (*models.Order, error)
+	// PutServiceOrdById(*models.Order, string) ([]string, error)
+	// DelServiceOrdById(string) error
+	// PostServiseOrdCloseById(string) error
+	// GetServiseTotalSales() (float64, error)
+	// GetServicePopularItem() ([]models.OrderItem, error)
 }
 
 func ReturnOrdSerStruct(ordInter dal.OrderDalInter, menuInt dal.MenuDalInter, invIntDal dal.InventoryDataAccess) *ordServiceToDal {
 	return &ordServiceToDal{ordDalInt: ordInter, menuDalInt: menuInt, inventDalInt: invIntDal}
 }
 
-func (ser *ordServiceToDal) GetServiceOrders() ([]models.Order, error) {
-	return ser.ordDalInt.ReadOrdersDal()
+func (ser *ordServiceToDal) CollectOrders() ([]models.Order, error) {
+	return ser.ordDalInt.SelectAllOrders()
 }
 
 // func (ser *ordServiceToDal) PostServiceOrder(ord *models.Order) ([]string, error) {

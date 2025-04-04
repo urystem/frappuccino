@@ -238,3 +238,4 @@ func (core *dalCore) insertToMenuIngs(tx *sqlx.Tx, menuID uint64, ings []models.
 	}
 	return nil
 }
+

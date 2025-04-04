@@ -16,7 +16,7 @@ CREATE TABLE inventory_transactions (
     id SERIAL PRIMARY KEY,
     inventory_id INT NOT NULL REFERENCES inventory (id) ON DELETE CASCADE,
     quantity_change FLOAT NOT NULL,
-    reason reason_of_inventory_transaction NOT NULL,
+    reason reason_of_inventory_transaction NOT NULL ,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP --NOW()
 );
 
