@@ -5,6 +5,7 @@ import "frappuccino/models"
 type OrderDalInter interface {
 	SelectAllOrders() ([]models.Order, error)
 	SelectOrder(uint64) (*models.Order, error)
+	DeleteOrder(uint64) error
 }
 
 func (core *dalCore) SelectAllOrders() ([]models.Order, error) {
@@ -54,4 +55,27 @@ func (core *dalCore) SelectOrder(id uint64) (*models.Order, error) {
 		return nil, err
 	}
 	return &order, tx.Commit()
+}
+
+func (core *dalCore) DeleteOrder(id uint64) error {
+	tx, err := core.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`DELETE FROM orders WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+
+	affects, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affects == 0 {
+		return models.ErrNotFound
+	}
+
+	return tx.Commit()
 }
