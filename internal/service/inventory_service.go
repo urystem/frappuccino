@@ -11,7 +11,7 @@ type inventoryServiceDal struct {
 	invDal dal.InventoryDataAccess
 }
 
-func NewInventoryService(dalInter dal.InventoryDataAccess) *inventoryServiceDal {
+func ReturnInventorySerStruct(dalInter dal.InventoryDataAccess) *inventoryServiceDal {
 	return &inventoryServiceDal{invDal: dalInter}
 }
 

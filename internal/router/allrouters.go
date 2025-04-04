@@ -15,7 +15,7 @@ func Allrouter(db *sqlx.DB) *http.ServeMux {
 	// setup pathfile to dulinvent and build to handfunc
 	dalCore := dal.ReturnRepoCore(db)
 	var dalInventInter dal.InventoryDataAccess = dalCore
-	var serviceInventInter service.InventoryService = service.NewInventoryService(dalInventInter)
+	var serviceInventInter service.InventoryService = service.ReturnInventorySerStruct(dalInventInter)
 	handInv := handler.NewInventoryHandler(serviceInventInter)
 	// mux.Handle("", mux1)
 	mux.HandleFunc("POST /inventory", handInv.PostInventory)
@@ -37,11 +37,13 @@ func Allrouter(db *sqlx.DB) *http.ServeMux {
 	mux.HandleFunc("PUT /menu/{id}", handMenu.PutMenuByID)
 
 	// // setup pathfiles to dulorder struct and build to handlfunc
-	// var dalOrdInter dal.OrderDalInter = dal.ReturnOrdDalStruct(*dir + PathFiles[0])
-	// var ordSer service.OrdServiceInter = service.ReturnOrdSerStruct(dalOrdInter, dalMenuInter, dalInventInter)
+	var dalOrdInter dal.OrderDalInter = dalCore
+	var serOrderInter service.OrdServiceInter = service.ReturnOrdSerStruct(dalOrdInter)
+	handOrd := handler.ReturnOrdHaldStruct(serOrderInter)
+
+	mux.HandleFunc("GET /orders", handOrd.GetOrders)
 	// ordHand := handler.ReturnOrdHaldStruct(ordSer)
 	// mux.HandleFunc("POST /orders", ordHand.PostOrder)
-	// mux.HandleFunc("GET /orders", ordHand.GetOrders)
 	// mux.HandleFunc("GET /orders/{id}", ordHand.GetOrdById)
 	// mux.HandleFunc("PUT /orders/{id}", ordHand.PutOrdById)
 	// mux.HandleFunc("DELETE /orders/{id}", ordHand.DelOrdById)

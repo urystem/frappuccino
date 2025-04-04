@@ -41,7 +41,10 @@ func (core *dalCore) SelectAllMenus() ([]models.MenuItem, error) {
 	for i := range menus {
 		// menus[i] деп структураның өзін бере салдым, (ө)үйткені ол тек 1 ғана аргумент қабылдайды екен
 		// menus[i].ID деп query ға $1 қоя салуға келмеді
-		stmt.Select(&menus[i].Ingredients, menus[i])
+		err = stmt.Select(&menus[i].Ingredients, menus[i])
+		if err != nil {
+			return nil, nil
+		}
 	}
 	return menus, tx.Commit()
 }
@@ -238,4 +241,3 @@ func (core *dalCore) insertToMenuIngs(tx *sqlx.Tx, menuID uint64, ings []models.
 	}
 	return nil
 }
-

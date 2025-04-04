@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"log/slog"
+	"net/http"
+
 	"frappuccino/internal/service"
 )
 
@@ -10,6 +13,21 @@ type ordHandToService struct {
 
 func ReturnOrdHaldStruct(ordSerInt service.OrdServiceInter) *ordHandToService {
 	return &ordHandToService{orderService: ordSerInt}
+}
+
+func (h *ordHandToService) GetOrders(w http.ResponseWriter, r *http.Request) {
+	orders, err := h.orderService.CollectOrders()
+	if err != nil {
+		slog.Error("Get orders", "error", err)
+		writeHttp(w, http.StatusInternalServerError, "get orders: ", err.Error())
+		return
+	}
+	err = bodyJsonStruct(w, orders, http.StatusOK)
+	if err != nil {
+		slog.Error("Can't give all orders to body", "error", err)
+		return
+	}
+	slog.Info("Get orders success")
 }
 
 // func (h *ordHandToService) PostOrder(w http.ResponseWriter, r *http.Request) {
@@ -41,15 +59,6 @@ func ReturnOrdHaldStruct(ordSerInt service.OrdServiceInter) *ordHandToService {
 // 	} else {
 // 		slog.Info("order created by : " + orderStruct.CustomerName)
 // 		writeHttp(w, http.StatusCreated, "succes", "order created by : "+orderStruct.CustomerName)
-// 	}
-// }
-
-// func (h *ordHandToService) GetOrders(w http.ResponseWriter, r *http.Request) {
-// 	if orders, err := h.orderService.GetServiceOrders(); err != nil {
-// 		slog.Error("Get orders", "error", err)
-// 		writeHttp(w, http.StatusInternalServerError, "get orders: ", err.Error())
-// 	} else if err = bodyJsonStruct(w, orders); err != nil {
-// 		slog.Error("Can't give all orders to body", "error", err)
 // 	}
 // }
 

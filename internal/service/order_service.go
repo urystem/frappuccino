@@ -6,9 +6,7 @@ import (
 )
 
 type ordServiceToDal struct {
-	ordDalInt    dal.OrderDalInter
-	menuDalInt   dal.MenuDalInter
-	inventDalInt dal.InventoryDataAccess
+	ordDalInt dal.OrderDalInter
 }
 
 type OrdServiceInter interface {
@@ -22,8 +20,8 @@ type OrdServiceInter interface {
 	// GetServicePopularItem() ([]models.OrderItem, error)
 }
 
-func ReturnOrdSerStruct(ordInter dal.OrderDalInter, menuInt dal.MenuDalInter, invIntDal dal.InventoryDataAccess) *ordServiceToDal {
-	return &ordServiceToDal{ordDalInt: ordInter, menuDalInt: menuInt, inventDalInt: invIntDal}
+func ReturnOrdSerStruct(ord dal.OrderDalInter) *ordServiceToDal {
+	return &ordServiceToDal{ordDalInt: ord}
 }
 
 func (ser *ordServiceToDal) CollectOrders() ([]models.Order, error) {
