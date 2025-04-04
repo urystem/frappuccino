@@ -1,75 +1,20 @@
 package dal
 
 import (
+	"database/sql"
 	"fmt"
 
 	"frappuccino/models"
 
-	"github.com/lib/pq"
+	"github.com/jmoiron/sqlx"
 )
 
 type MenuDalInter interface {
-	InsertMenu(*models.MenuItem) ([]models.MenuIngredients, error)
 	SelectAllMenus() ([]models.MenuItem, error)
 	SelectMenu(uint64) (*models.MenuItem, error)
 	DeleteMenu(uint64) (*models.MenuDepend, error)
-}
-
-func (core *dalCore) InsertMenu(menuItems *models.MenuItem) ([]models.MenuIngredients, error) {
-	tx, err := core.db.Beginx()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	insertMenuQ := `
-		INSERT INTO menu_items (name, description, tags, allergens, price)
-		VALUES ($1, $2, $3, $4, $5)
-	RETURNING id`
-
-	err = tx.QueryRow(insertMenuQ,
-		menuItems.Name,
-		menuItems.Description,
-		menuItems.Tags,
-		menuItems.Allergens,
-		menuItems.Price).Scan(&menuItems.ID)
-	if err != nil {
-		return nil, err
-	}
-	insert1MenuIngQ := `
-		INSERT INTO menu_item_ingredients
-		VALUES(:product_id, :inventory_id, :quantity)`
-
-	// егер запрос көп болса PrepareNamed дұрыс
-	// ал 1 еу ғана бола NamedExec дұрыс
-	stmt, err := tx.PrepareNamed(insert1MenuIngQ)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-	var invalidCount uint64
-	for _, v := range menuItems.Ingredients {
-		v.ProductID = menuItems.ID
-		_, err = stmt.Exec(v)
-		if err != nil {
-			if pqErr, ok := err.(*pq.Error); ok {
-				// егер ошибка айди табылмағандықтапн болса, сол жаққа жинай береміз
-				if pqErr.Code == "23503" {
-					v.Err = "not found"
-					menuItems.Ingredients[invalidCount] = v
-					invalidCount++
-					fmt.Println("ddd")
-					continue
-				}
-			}
-			return nil, err
-		}
-	}
-
-	// егер табылмаған айдилар болса
-	if invalidCount != 0 {
-		return menuItems.Ingredients[:invalidCount], models.ErrNotFound
-	}
-	return nil, tx.Commit()
+	InsertMenu(*models.MenuItem) ([]models.MenuIngredients, error)
+	UpdateMenu(*models.MenuItem) ([]models.MenuIngredients, error)
 }
 
 func (core *dalCore) SelectAllMenus() ([]models.MenuItem, error) {
@@ -161,4 +106,135 @@ func (core *dalCore) DeleteMenu(id uint64) (*models.MenuDepend, error) {
 	}
 
 	return nil, tx.Commit()
+}
+
+func (core *dalCore) InsertMenu(menuItems *models.MenuItem) ([]models.MenuIngredients, error) {
+	tx, err := core.db.Beginx()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	notFoundIngs, err := core.checkIngs(tx, menuItems.Ingredients)
+	if err != nil {
+		return notFoundIngs, err
+	}
+
+	insertMenuQ := `
+		INSERT INTO menu_items (name, description, tags, allergens, price)
+		VALUES ($1, $2, $3, $4, $5)
+	RETURNING id`
+
+	err = tx.QueryRow(insertMenuQ,
+		menuItems.Name,
+		menuItems.Description,
+		menuItems.Tags,
+		menuItems.Allergens,
+		menuItems.Price).Scan(&menuItems.ID)
+	if err != nil {
+		return nil, err
+	}
+	err = core.insertToMenuIngs(tx, menuItems.ID, menuItems.Ingredients)
+	if err != nil {
+		return nil, err
+	}
+	return nil, tx.Commit()
+}
+
+func (core *dalCore) UpdateMenu(menuItems *models.MenuItem) ([]models.MenuIngredients, error) {
+	tx, err := core.db.Beginx()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	notFoundIngs, err := core.checkIngs(tx, menuItems.Ingredients)
+	if err != nil {
+		return notFoundIngs, err
+	}
+
+	updateMenuQ := `
+	UPDATE menu_items 
+		SET name=:name, description = :description, 
+			tags = :tags, allergens = :allergens, price = :price
+		WHERE id = :id`
+
+	result, err := tx.NamedExec(updateMenuQ, menuItems)
+	if err != nil {
+		fmt.Println("qalaisyn")
+		return nil, err
+	}
+
+	affects, err := result.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+
+	if affects == 0 {
+		return nil, models.ErrNotFound
+	}
+
+	_, err = tx.Exec(`
+	DELETE FROM menu_item_ingredients
+		WHERE product_id = $1
+	`, menuItems.ID)
+	if err != nil {
+		return nil, err
+	}
+	err = core.insertToMenuIngs(tx, menuItems.ID, menuItems.Ingredients)
+	if err != nil {
+		return nil, err
+	}
+	return nil, tx.Commit()
+}
+
+func (core *dalCore) checkIngs(tx *sqlx.Tx, ings []models.MenuIngredients) ([]models.MenuIngredients, error) {
+	stmt, err := tx.Prepare(`SELECT TRUE FROM inventory WHERE id = $1`)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	var notFoundCount uint64
+	for _, v := range ings {
+		var exists bool
+
+		err = stmt.QueryRow(v.InventoryID).Scan(&exists)
+
+		if err == sql.ErrNoRows {
+			v.Status = "not found"
+			ings[notFoundCount] = v
+			notFoundCount++
+		} else if err != nil {
+			return nil, err
+		}
+	}
+
+	if notFoundCount != 0 {
+		return ings[:notFoundCount], models.ErrIngsNotFound
+	}
+
+	return nil, nil
+}
+
+func (core *dalCore) insertToMenuIngs(tx *sqlx.Tx, menuID uint64, ings []models.MenuIngredients) error {
+	insert1MenuIngQ := `
+		INSERT INTO menu_item_ingredients
+		VALUES(:product_id, :inventory_id, :quantity)`
+
+	// егер запрос көп болса PrepareNamed дұрыс
+	// ал 1 еу ғана бола NamedExec дұрыс
+	stmt, err := tx.PrepareNamed(insert1MenuIngQ)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, v := range ings {
+		v.ProductID = menuID
+		_, err = stmt.Exec(v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

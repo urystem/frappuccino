@@ -15,7 +15,7 @@ type MenuItem struct {
 }
 
 type MenuIngredients struct {
-	Err         string  `json:"error"`
+	Status      string  `json:"status"`
 	ProductID   uint64  `json:"-" db:"product_id"`
 	InventoryID uint64  `json:"inventory_id" db:"inventory_id"`
 	Quantity    float64 `json:"quantity" db:"quantity"`
@@ -27,9 +27,4 @@ type MenuDepend struct {
 		Order_id      uint64 `json:"order_id" db:"order_id"`
 		Customer_name string `json:"customer_name" db:"customer_name"`
 	} `json:"orders"`
-}
-
-type InvalidIngredients struct {
-	Err             string
-	iIngredients_id map[uint64]float64
 }

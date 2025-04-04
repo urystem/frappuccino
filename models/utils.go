@@ -8,6 +8,7 @@ var (
 	ErrDelDepend       = errors.New("cannot delete")
 	ErrConflict        = errors.New(" already exists")
 	ErrNotFound        = errors.New(" not found")
+	ErrIngsNotFound    = errors.New("ing not found")
 	InvalidIngs        = errors.New(" not found ingrident(s) for menu")
 	ErrOrdNotFoundItem = errors.New(" not found item in menu")
 	ErrOrdStatusClosed = errors.New(" closed")

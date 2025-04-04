@@ -13,23 +13,15 @@ type menuServiceToDal struct {
 }
 
 type MenuServiceInter interface {
-	CreateMenu(*models.MenuItem) ([]models.MenuIngredients, error)
 	CollectMenus() ([]models.MenuItem, error)
 	TakeMenu(uint64) (*models.MenuItem, error)
 	DelServiceMenuById(uint64) (*models.MenuDepend, error)
-	// PutServiceMenuById(*models.MenuItem, string) ([]string, error)
+	CreateMenu(*models.MenuItem) ([]models.MenuIngredients, error)
+	UpgradeMenu(*models.MenuItem) ([]models.MenuIngredients, error)
 }
 
 func ReturnMenuSerStruct(interMenuDal dal.MenuDalInter) *menuServiceToDal {
 	return &menuServiceToDal{menuDal: interMenuDal}
-}
-
-func (ser *menuServiceToDal) CreateMenu(menu *models.MenuItem) ([]models.MenuIngredients, error) {
-	ings, err := ser.checkMenuStruct(menu)
-	if err != nil {
-		return ings, err
-	}
-	return ser.menuDal.InsertMenu(menu)
 }
 
 func (ser *menuServiceToDal) CollectMenus() ([]models.MenuItem, error) {
@@ -44,25 +36,21 @@ func (ser *menuServiceToDal) DelServiceMenuById(id uint64) (*models.MenuDepend, 
 	return ser.menuDal.DeleteMenu(id)
 }
 
-// func (ser *menuServiceToDal) PutServiceMenuById(menu *models.MenuItem, id string) ([]string, error) {
-// 	if ings, err := ser.checkNotFoundIngs(menu.Ingredients); err != nil {
-// 		return nil, err
-// 	} else if ings != nil && len(ings) != 0 {
-// 		return ings, models.ErrNotFoundIngs
-// 	}
-// 	menus, err := ser.menuDalInt.ReadMenuDal()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	for i, v := range menus {
-// 		if v.ID == id {
-// 			menu.ID = id
-// 			menus[i] = *menu
-// 			return nil, ser.menuDalInt.WriteMenuDal(menus)
-// 		}
-// 	}
-// 	return nil, models.ErrNotFound
-// }
+func (ser *menuServiceToDal) CreateMenu(menu *models.MenuItem) ([]models.MenuIngredients, error) {
+	ings, err := ser.checkMenuStruct(menu)
+	if err != nil {
+		return ings, err
+	}
+	return ser.menuDal.InsertMenu(menu)
+}
+
+func (ser *menuServiceToDal) UpgradeMenu(menu *models.MenuItem) ([]models.MenuIngredients, error) {
+	ings, err := ser.checkMenuStruct(menu)
+	if err != nil {
+		return ings, err
+	}
+	return ser.menuDal.UpdateMenu(menu)
+}
 
 // func (ser *menuServiceToDal) checkNotFoundIngs(itemsToCheck []models.MenuItemIngredient) ([]string, error) {
 // 	ingDul, err := ser.inventDalInt.ReadInventory()
@@ -112,10 +100,10 @@ func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) ([]models.Me
 	// check for unique and negative quantity ing
 	for i, ing := range menu.Ingredients {
 		// тазалап алайық, постманнан бар болып  келуі мүмкін
-		menu.Ingredients[i].Err = ""
+		menu.Ingredients[i].Status = ""
 		if _, x := forTestUniqIngs[ing.InventoryID]; x || ing.Quantity < 0 {
 			if ing.Quantity < 0 {
-				menu.Ingredients[i].Err = "invalid quantity"
+				menu.Ingredients[i].Status = "invalid quantity"
 			}
 			invalids[ing.InventoryID] = struct{}{}
 		}
@@ -133,8 +121,8 @@ func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) ([]models.Me
 		ing := menu.Ingredients[i]
 		if _, x := invalids[ing.InventoryID]; x {
 			// Если элемент не нужно удалять, ставим его в начало
-			if ing.Err == "" {
-				ing.Err = "Duplicated"
+			if ing.Status == "" {
+				ing.Status = "Duplicated"
 			}
 			menu.Ingredients[invalidCount] = ing
 			invalidCount++

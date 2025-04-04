@@ -29,11 +29,12 @@ func Allrouter(db *sqlx.DB) *http.ServeMux {
 	var dalMenuInter dal.MenuDalInter = dalCore
 	var menuSerInter service.MenuServiceInter = service.ReturnMenuSerStruct(dalMenuInter)
 	handMenu := handler.ReturnMenuHaldStruct(menuSerInter)
-	mux.HandleFunc("POST /menu", handMenu.PostMenu)
+
 	mux.HandleFunc("GET /menu", handMenu.GetMenus)
 	mux.HandleFunc("GET /menu/{id}", handMenu.GetMenuByID)
-	// mux.HandleFunc("PUT /menu/{id}", menuHand.PutMenuById)
 	mux.HandleFunc("DELETE /menu/{id}", handMenu.DelMenu)
+	mux.HandleFunc("POST /menu", handMenu.PostMenu)
+	mux.HandleFunc("PUT /menu/{id}", handMenu.PutMenuByID)
 
 	// // setup pathfiles to dulorder struct and build to handlfunc
 	// var dalOrdInter dal.OrderDalInter = dal.ReturnOrdDalStruct(*dir + PathFiles[0])
