@@ -3,6 +3,7 @@ package handler
 import (
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"frappuccino/internal/service"
 )
@@ -29,6 +30,41 @@ func (h *ordHandToService) GetOrders(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("Get orders success")
 }
+
+func (h *ordHandToService) GetOrderByID(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(r.PathValue("id"), 10, 0)
+	if err != nil {
+		slog.Error("Invalid id for get order")
+		writeHttp(w, http.StatusBadRequest, "Invalid id", "Check the order id")
+		return
+	}
+
+	order, err := h.orderService.TakeOrder(id)
+	if err != nil {
+		slog.Error("Can't get order struct: ", "error", err)
+		writeHttp(w, http.StatusInternalServerError, "get order:", err.Error())
+		return
+	}
+
+	if err = bodyJsonStruct(w, order, http.StatusOK); err != nil {
+		slog.Error("Get order: cannot write struct to the body")
+	}
+}
+
+// func (h *ordHandToService) GetOrdById(w http.ResponseWriter, r *http.Request) {
+// 	if id := r.PathValue("id"); checkOdrId(id) {
+//
+// 	} else if order, err := h.orderService.GetServiceOrdById(id); err != nil {
+// 		slog.Error("Can't get order struct: ", "error", err)
+// 		if err == models.ErrNotFound {
+// 			writeHttp(w, http.StatusNotFound, "order", err.Error())
+// 		} else {
+// 			writeHttp(w, http.StatusInternalServerError, "get order failed", err.Error())
+// 		}
+// 	} else if err = bodyJsonStruct(w, order); err != nil {
+// 		slog.Error("Can't give order struct to body ", "error", err)
+// 	}
+// }
 
 // func (h *ordHandToService) PostOrder(w http.ResponseWriter, r *http.Request) {
 // 	var orderStruct models.Order
@@ -59,22 +95,6 @@ func (h *ordHandToService) GetOrders(w http.ResponseWriter, r *http.Request) {
 // 	} else {
 // 		slog.Info("order created by : " + orderStruct.CustomerName)
 // 		writeHttp(w, http.StatusCreated, "succes", "order created by : "+orderStruct.CustomerName)
-// 	}
-// }
-
-// func (h *ordHandToService) GetOrdById(w http.ResponseWriter, r *http.Request) {
-// 	if id := r.PathValue("id"); checkOdrId(id) {
-// 		slog.Warn("Invalid id for get order")
-// 		writeHttp(w, http.StatusBadRequest, "Invalid id", "Check the order id")
-// 	} else if order, err := h.orderService.GetServiceOrdById(id); err != nil {
-// 		slog.Error("Can't get order struct: ", "error", err)
-// 		if err == models.ErrNotFound {
-// 			writeHttp(w, http.StatusNotFound, "order", err.Error())
-// 		} else {
-// 			writeHttp(w, http.StatusInternalServerError, "get order failed", err.Error())
-// 		}
-// 	} else if err = bodyJsonStruct(w, order); err != nil {
-// 		slog.Error("Can't give order struct to body ", "error", err)
 // 	}
 // }
 

@@ -11,6 +11,7 @@ type ordServiceToDal struct {
 
 type OrdServiceInter interface {
 	CollectOrders() ([]models.Order, error)
+	TakeOrder(uint64) (*models.Order, error)
 	// PostServiceOrder(*models.Order) ([]string, error)
 	// GetServiceOrdById(string) (*models.Order, error)
 	// PutServiceOrdById(*models.Order, string) ([]string, error)
@@ -26,6 +27,10 @@ func ReturnOrdSerStruct(ord dal.OrderDalInter) *ordServiceToDal {
 
 func (ser *ordServiceToDal) CollectOrders() ([]models.Order, error) {
 	return ser.ordDalInt.SelectAllOrders()
+}
+
+func (ser *ordServiceToDal) TakeOrder(id uint64) (*models.Order, error) {
+	return ser.ordDalInt.SelectOrder(id)
 }
 
 // func (ser *ordServiceToDal) PostServiceOrder(ord *models.Order) ([]string, error) {
@@ -53,19 +58,6 @@ func (ser *ordServiceToDal) CollectOrders() ([]models.Order, error) {
 // 	}
 // 	ord.Status, ord.CreatedAt = "open", time.Now().Format(time.RFC3339)
 // 	return nil, ser.ordDalInt.WriteOrderDal(append(orders, *ord))
-// }
-
-// func (ser *ordServiceToDal) GetServiceOrdById(id string) (*models.Order, error) {
-// 	orders, err := ser.ordDalInt.ReadOrdersDal()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	for _, v := range orders {
-// 		if v.ID == id {
-// 			return &v, nil
-// 		}
-// 	}
-// 	return nil, models.ErrNotFound
 // }
 
 // func (ser *ordServiceToDal) PutServiceOrdById(ord *models.Order, id string) ([]string, error) {

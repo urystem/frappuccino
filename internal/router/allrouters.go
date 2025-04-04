@@ -42,9 +42,9 @@ func Allrouter(db *sqlx.DB) *http.ServeMux {
 	handOrd := handler.ReturnOrdHaldStruct(serOrderInter)
 
 	mux.HandleFunc("GET /orders", handOrd.GetOrders)
+	mux.HandleFunc("GET /orders/{id}", handOrd.GetOrderByID)
 	// ordHand := handler.ReturnOrdHaldStruct(ordSer)
 	// mux.HandleFunc("POST /orders", ordHand.PostOrder)
-	// mux.HandleFunc("GET /orders/{id}", ordHand.GetOrdById)
 	// mux.HandleFunc("PUT /orders/{id}", ordHand.PutOrdById)
 	// mux.HandleFunc("DELETE /orders/{id}", ordHand.DelOrdById)
 	// mux.HandleFunc("POST /orders/{id}/close", ordHand.PostOrdCloseById)
