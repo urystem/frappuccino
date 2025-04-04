@@ -52,27 +52,6 @@ func (ser *menuServiceToDal) UpgradeMenu(menu *models.MenuItem) ([]models.MenuIn
 	return ser.menuDal.UpdateMenu(menu)
 }
 
-// func (ser *menuServiceToDal) checkNotFoundIngs(itemsToCheck []models.MenuItemIngredient) ([]string, error) {
-// 	ingDul, err := ser.inventDalInt.ReadInventory()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var notFoundIngs []string
-// 	for _, ing := range itemsToCheck {
-// 		var isHere bool
-// 		for _, ingInDal := range ingDul {
-// 			if ing.IngredientID == ingInDal.IngredientID {
-// 				isHere = true
-// 				break
-// 			}
-// 		}
-// 		if !isHere {
-// 			notFoundIngs = append(notFoundIngs, ing.IngredientID)
-// 		}
-// 	}
-// 	return notFoundIngs, nil
-// }
-
 func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) ([]models.MenuIngredients, error) {
 	if isInvalidName(menu.Name) {
 		return nil, errors.New("invalid name")
@@ -100,10 +79,10 @@ func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) ([]models.Me
 	// check for unique and negative quantity ing
 	for i, ing := range menu.Ingredients {
 		// тазалап алайық, постманнан бар болып  келуі мүмкін
-		menu.Ingredients[i].Status = ""
+		*menu.Ingredients[i].Status = ""
 		if _, x := forTestUniqIngs[ing.InventoryID]; x || ing.Quantity < 0 {
 			if ing.Quantity < 0 {
-				menu.Ingredients[i].Status = "invalid quantity"
+				*menu.Ingredients[i].Status = "invalid quantity"
 			}
 			invalids[ing.InventoryID] = struct{}{}
 		}
@@ -121,8 +100,8 @@ func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) ([]models.Me
 		ing := menu.Ingredients[i]
 		if _, x := invalids[ing.InventoryID]; x {
 			// Если элемент не нужно удалять, ставим его в начало
-			if ing.Status == "" {
-				ing.Status = "Duplicated"
+			if *ing.Status == "" {
+				*ing.Status = "Duplicated"
 			}
 			menu.Ingredients[invalidCount] = ing
 			invalidCount++

@@ -1,8 +1,6 @@
 package models
 
-import (
-	"github.com/lib/pq"
-)
+import "github.com/lib/pq"
 
 type MenuItem struct {
 	ID          uint64            `json:"product_id" db:"id" `
@@ -15,7 +13,7 @@ type MenuItem struct {
 }
 
 type MenuIngredients struct {
-	Status      string  `json:"status"`
+	Status      *string `json:"status,omitempty"` // егер нил болса мүлдем жасырып тастайды
 	ProductID   uint64  `json:"-" db:"product_id"`
 	InventoryID uint64  `json:"inventory_id" db:"inventory_id"`
 	Quantity    float64 `json:"quantity" db:"quantity"`

@@ -201,7 +201,7 @@ func (core *dalCore) checkIngs(tx *sqlx.Tx, ings []models.MenuIngredients) ([]mo
 		err = stmt.QueryRow(v.InventoryID).Scan(&exists)
 
 		if err == sql.ErrNoRows {
-			v.Status = "not found"
+			*v.Status = "not found"
 			ings[notFoundCount] = v
 			notFoundCount++
 		} else if err != nil {
