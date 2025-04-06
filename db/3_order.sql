@@ -11,7 +11,7 @@ CREATE TABLE orders (
 );
 
 CREATE TABLE order_items (
-    --id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    -- id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     order_id INT NOT NULL REFERENCES orders (id) ON DELETE CASCADE,
     product_id INT NOT NULL REFERENCES menu_items (id) ON DELETE CASCADE,
     quantity INT NOT NULL CHECK (quantity > 0),
@@ -21,7 +21,7 @@ CREATE TABLE order_items (
 CREATE TABLE order_status_history (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     order_id INT NOT NULL REFERENCES orders (id) ON DELETE CASCADE,
-    status order_status NOT NULL DEFAULT 'processing',
+    status order_status NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP --NOW()
 );
 
@@ -31,6 +31,25 @@ CREATE INDEX idx_orders_customer_name ON orders USING GIN (
 );
 
 CREATE INDEX idx_orders_allergens ON orders USING GIN (allergens);
+
+-- 1. Функция-триггер
+CREATE OR REPLACE FUNCTION log_order_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Проверяем, изменился ли статус
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    INSERT INTO order_status_history (order_id, status)
+    VALUES (NEW.id, NEW.status);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2. Сам триггер
+CREATE TRIGGER trg_log_order_status_change
+AFTER UPDATE ON orders
+FOR EACH ROW
+EXECUTE FUNCTION log_order_status_change();
 
 INSERT INTO
     orders (

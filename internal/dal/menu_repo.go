@@ -79,7 +79,7 @@ func (core *dalCore) DeleteMenu(id uint64) (*models.MenuDepend, error) {
 	defer tx.Rollback()
 
 	query := `
-	SELECT order_id, customer_name 
+	SELECT id, customer_name 
 		FROM order_items 
 		JOIN orders ON order_id=id 
 		WHERE status <> 'processing' AND product_id=$1`

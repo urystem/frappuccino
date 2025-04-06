@@ -12,10 +12,10 @@ type ordServiceToDal struct {
 type OrdServiceInter interface {
 	CollectOrders() ([]models.Order, error)
 	TakeOrder(uint64) (*models.Order, error)
+	RemoveOrder(uint64) error
 	// PostServiceOrder(*models.Order) ([]string, error)
 	// GetServiceOrdById(string) (*models.Order, error)
 	// PutServiceOrdById(*models.Order, string) ([]string, error)
-	// DelServiceOrdById(string) error
 	// PostServiseOrdCloseById(string) error
 	// GetServiseTotalSales() (float64, error)
 	// GetServicePopularItem() ([]models.OrderItem, error)
@@ -31,6 +31,10 @@ func (ser *ordServiceToDal) CollectOrders() ([]models.Order, error) {
 
 func (ser *ordServiceToDal) TakeOrder(id uint64) (*models.Order, error) {
 	return ser.ordDalInt.SelectOrder(id)
+}
+
+func (ser *ordServiceToDal) RemoveOrder(id uint64) error {
+	return ser.ordDalInt.DeleteOrder(id)
 }
 
 // func (ser *ordServiceToDal) PostServiceOrder(ord *models.Order) ([]string, error) {

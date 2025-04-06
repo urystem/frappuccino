@@ -17,7 +17,7 @@ CREATE TABLE menu_item_ingredients (
 );
 
 CREATE TABLE price_history (
-    -- id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     product_id INT NOT NULL REFERENCES menu_items (id) ON DELETE CASCADE,
     old_price DECIMAL(10, 2) NOT NULL CHECK (old_price >= 0),
     new_price DECIMAL(10, 2) NOT NULL CHECK (new_price >= 0),

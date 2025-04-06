@@ -47,3 +47,33 @@ EXECUTE FUNCTION record_price_change();
 Работать быстрее при массовых изменениях	❌ Нет      	        ✅ Да
 
 
+
+
+
+
+
+
+
+
+
+Оператор	Поведение с NULL	Надежность
+<>	Возвращает NULL	❌ может пропустить
+IS DISTINCT FROM	Возвращает TRUE/FALSE	✅ всегда
+
+CREATE OR REPLACE FUNCTION log_order_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Проверяем, изменился ли статус
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    INSERT INTO order_status_history (order_id, status, updated_at)
+    VALUES (NEW.id, NEW.status, CURRENT_TIMESTAMP);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2. Сам триггер
+CREATE TRIGGER trg_log_order_status_change
+AFTER UPDATE ON orders
+FOR EACH ROW
+EXECUTE FUNCTION log_order_status_change();

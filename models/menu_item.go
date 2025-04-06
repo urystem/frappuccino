@@ -20,9 +20,6 @@ type MenuIngredients struct {
 }
 
 type MenuDepend struct {
-	Err    string `json:"error"`
-	Orders []struct {
-		Order_id      uint64 `json:"order_id" db:"order_id"`
-		Customer_name string `json:"customer_name" db:"customer_name"`
-	} `json:"orders"`
+	Err    string  `json:"error"`
+	Orders []Order `json:"orders"`
 }
