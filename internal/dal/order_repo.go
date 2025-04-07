@@ -2,11 +2,8 @@ package dal
 
 import (
 	"database/sql"
-	"fmt"
 
 	"frappuccino/models"
-
-	"github.com/jmoiron/sqlx"
 )
 
 type OrderDalInter interface {
@@ -81,8 +78,8 @@ func (core *dalCore) DeleteOrder(id uint64) error {
 	}
 
 	if status == "processing" {
-		_, err = tx.Exec(`UPDATE inventory 
-		SET quantity = quantity+(i.quantity*o.quantity) 
+		_, err = tx.Exec(`UPDATE inventory AS inv
+		SET quantity = i.quantity * o.quantity
 		FROM menu_item_ingredients AS i
 		JOIN order_items AS o ON i.product_id = o.product_id
 		WHERE o.order_id = $1`, id)
@@ -90,6 +87,10 @@ func (core *dalCore) DeleteOrder(id uint64) error {
 			return err
 		}
 	}
+	// SELECT inv.quantity, i.quantity, o.quantity FROM inventory AS inv JOIN  menu_item_ingredients AS i ON inv.id = i.inventory_id JOIN order_items AS o ON o.product_id = i.product_id WHERE o.order_id = 1;
+	// select inv.quantity AS ostotok, i.quantity AS menuge, o.quantity AS menuSany FROM inventory AS inv JOIN  menu_item_ingredients AS i ON inv.id = i.inventory_id JOIN order_items AS o ON o.product_id = i.product_id WHERE o.order_id = 1;
+	// select inv.quantity AS ostotok, i.quantity AS menuge, o.quantity AS menuSany, inv.quantity+(i.quantity * o.quantity) AS sum FROM inventory AS inv JOIN  menu_item_ingredients AS i ON inv.id = i.inventory_id JOIN order_items AS o ON o.product_id = i.product_id WHERE o.order_id = 1;
+
 	_, err = tx.Exec(`DELETE FROM orders WHERE id=$1`, id)
 	if err != nil {
 		return err
@@ -97,21 +98,21 @@ func (core *dalCore) DeleteOrder(id uint64) error {
 	return tx.Commit()
 }
 
-func (core *dalCore) inventoryUpdaterByOrder(tx *sqlx.Tx, items []models.OrderItem) error {
-	stmt, err := tx.PrepareNamed(`SELECT inventory_id, quantity*:quantity FROM menu_item_ingredients WHERE product_id = :product_id`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	var menuIngs []models.MenuIngredients
-	for _, v := range items {
-		var menuIngsTemp []models.MenuIngredients
-		stmt.Select(&menuIngsTemp, v)
-		menuIngs = append(menuIngs, menuIngsTemp...)
-	}
-	fmt.Println(menuIngs)
-	return nil
-}
+// func (core *dalCore) inventoryUpdaterByOrder(tx *sqlx.Tx, items []models.OrderItem) error {
+// 	stmt, err := tx.PrepareNamed(`SELECT inventory_id, quantity*:quantity FROM menu_item_ingredients WHERE product_id = :product_id`)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer stmt.Close()
+// 	var menuIngs []models.MenuIngredients
+// 	for _, v := range items {
+// 		var menuIngsTemp []models.MenuIngredients
+// 		stmt.Select(&menuIngsTemp, v)
+// 		menuIngs = append(menuIngs, menuIngsTemp...)
+// 	}
+// 	fmt.Println(menuIngs)
+// 	return nil
+// }
 
 func (core *dalCore) InsertOrder(*models.Order) ([]models.OrderItem, error) {
 	tx, err := core.db.Beginx()

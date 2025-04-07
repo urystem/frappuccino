@@ -6,13 +6,20 @@ import (
 	"strconv"
 
 	"frappuccino/internal/service"
+	"frappuccino/models"
 )
 
 type ordHandToService struct {
 	orderService service.OrdServiceInter
 }
 
-func ReturnOrdHaldStruct(ordSerInt service.OrdServiceInter) *ordHandToService {
+type ordHandInt interface {
+	GetOrders(w http.ResponseWriter, r *http.Request)
+	GetOrderByID(w http.ResponseWriter, r *http.Request)
+	DelOrderByID(w http.ResponseWriter, r *http.Request)
+}
+
+func ReturnOrdHaldStruct(ordSerInt service.OrdServiceInter) ordHandInt {
 	return &ordHandToService{orderService: ordSerInt}
 }
 
@@ -49,6 +56,29 @@ func (h *ordHandToService) GetOrderByID(w http.ResponseWriter, r *http.Request) 
 	if err = bodyJsonStruct(w, order, http.StatusOK); err != nil {
 		slog.Error("Get order: cannot write struct to the body")
 	}
+}
+
+func (h *ordHandToService) DelOrderByID(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(r.PathValue("id"), 10, 0)
+	if err != nil {
+		slog.Warn("Invalid id for get order")
+		writeHttp(w, http.StatusBadRequest, "Invalid id", "Check the order id")
+		return
+	}
+
+	err = h.orderService.RemoveOrder(id)
+	if err != nil {
+		slog.Error("Delete order: ", "error id:", err)
+		if err == models.ErrNotFound {
+			writeHttp(w, http.StatusNotFound, "order", err.Error())
+		} else {
+			writeHttp(w, http.StatusInternalServerError, "order", err.Error())
+		}
+		return
+	}
+
+	slog.Info("Order ", "deleted:", id)
+	writeHttp(w, http.StatusNoContent, "", "")
 }
 
 // func (h *ordHandToService) GetOrdById(w http.ResponseWriter, r *http.Request) {
@@ -128,23 +158,6 @@ func (h *ordHandToService) GetOrderByID(w http.ResponseWriter, r *http.Request) 
 // 	} else {
 // 		slog.Info("order puted by : " + orderStruct.CustomerName)
 // 		writeHttp(w, http.StatusCreated, "order puted by ", orderStruct.CustomerName)
-// 	}
-// }
-
-// func (h *ordHandToService) DelOrdById(w http.ResponseWriter, r *http.Request) {
-// 	if id := r.PathValue("id"); checkOdrId(id) {
-// 		slog.Warn("Invalid id for get order")
-// 		writeHttp(w, http.StatusBadRequest, "Invalid id", "Check the order id")
-// 	} else if err := h.orderService.DelServiceOrdById(id); err != nil {
-// 		slog.Error("Delete order error id: " + id)
-// 		if err == models.ErrNotFound {
-// 			writeHttp(w, http.StatusNotFound, "order", err.Error())
-// 		} else {
-// 			writeHttp(w, http.StatusInternalServerError, "order", err.Error())
-// 		}
-// 	} else {
-// 		slog.Info("Order ", "deleted:", id)
-// 		writeHttp(w, http.StatusNoContent, "", "")
 // 	}
 // }
 
