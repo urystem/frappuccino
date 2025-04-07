@@ -12,16 +12,16 @@ type menuServiceToDal struct {
 	menuDal dal.MenuDalInter
 }
 
-func ReturnMenuSerStruct(interMenuDal dal.MenuDalInter) *menuServiceToDal {
-	return &menuServiceToDal{menuDal: interMenuDal}
-}
-
 type MenuServiceInter interface {
 	CollectMenus() ([]models.MenuItem, error)
 	TakeMenu(uint64) (*models.MenuItem, error)
 	DelServiceMenuById(uint64) (*models.MenuDepend, error)
 	CreateMenu(*models.MenuItem) ([]models.MenuIngredients, error)
 	UpgradeMenu(*models.MenuItem) ([]models.MenuIngredients, error)
+}
+
+func ReturnMenuSerStruct(interMenuDal dal.MenuDalInter) MenuServiceInter {
+	return &menuServiceToDal{menuDal: interMenuDal}
 }
 
 func (ser *menuServiceToDal) CollectMenus() ([]models.MenuItem, error) {

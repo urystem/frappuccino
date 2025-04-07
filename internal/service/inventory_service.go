@@ -11,10 +11,6 @@ type inventoryServiceDal struct {
 	invDal dal.InventoryDataAccess
 }
 
-func ReturnInventorySerStruct(dalInter dal.InventoryDataAccess) *inventoryServiceDal {
-	return &inventoryServiceDal{invDal: dalInter}
-}
-
 type InventoryService interface {
 	CreateInventory(*models.Inventory) error
 	CollectInventories() ([]models.Inventory, error)
@@ -22,6 +18,11 @@ type InventoryService interface {
 	UpgradeInventory(*models.Inventory) error
 	RemoveInventory(uint64) (*models.InventoryDepend, error)
 	// PutAllInvets([]models.InventoryItem) ([]string, error)
+}
+
+// return interface
+func ReturnInventorySerInt(dalInter dal.InventoryDataAccess) InventoryService {
+	return &inventoryServiceDal{invDal: dalInter}
 }
 
 func (ser *inventoryServiceDal) CreateInventory(inv *models.Inventory) error {

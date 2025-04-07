@@ -14,7 +14,15 @@ type inventoryHandler struct {
 	invSrv service.InventoryService
 }
 
-func NewInventoryHandler(service service.InventoryService) *inventoryHandler {
+type inventoryHandlerInt interface {
+	PostInventory(w http.ResponseWriter, r *http.Request)
+	GetInventories(w http.ResponseWriter, r *http.Request)
+	GetInventoryByID(w http.ResponseWriter, r *http.Request)
+	PutInventory(w http.ResponseWriter, r *http.Request)
+	DeleteInventory(w http.ResponseWriter, r *http.Request)
+}
+
+func NewInventoryHandler(service service.InventoryService) inventoryHandlerInt {
 	return &inventoryHandler{invSrv: service}
 }
 

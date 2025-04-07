@@ -10,15 +10,23 @@ import (
 	"frappuccino/models"
 )
 
-type menuHaldToService struct {
+type menuHandToService struct {
 	menuServInt service.MenuServiceInter
 }
 
-func ReturnMenuHaldStruct(menuSerInt service.MenuServiceInter) *menuHaldToService {
-	return &menuHaldToService{menuServInt: menuSerInt}
+type menuHandInt interface {
+	GetMenus(w http.ResponseWriter, r *http.Request)
+	GetMenuByID(w http.ResponseWriter, r *http.Request)
+	DelMenu(w http.ResponseWriter, r *http.Request)
+	PostMenu(w http.ResponseWriter, r *http.Request)
+	PutMenuByID(w http.ResponseWriter, r *http.Request)
 }
 
-func (handMenu *menuHaldToService) GetMenus(w http.ResponseWriter, r *http.Request) {
+func ReturnMenuHaldStruct(menuSerInt service.MenuServiceInter) menuHandInt {
+	return &menuHandToService{menuServInt: menuSerInt}
+}
+
+func (handMenu *menuHandToService) GetMenus(w http.ResponseWriter, r *http.Request) {
 	menus, err := handMenu.menuServInt.CollectMenus()
 	if err != nil {
 		slog.Error("Error getting all menus", "error", err)
@@ -35,7 +43,7 @@ func (handMenu *menuHaldToService) GetMenus(w http.ResponseWriter, r *http.Reque
 	slog.Info("Get all menu list")
 }
 
-func (handMenu *menuHaldToService) GetMenuByID(w http.ResponseWriter, r *http.Request) {
+func (handMenu *menuHandToService) GetMenuByID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(r.PathValue("id"), 10, 0)
 	if err != nil {
 		slog.Error("Get Menu: invalid id")
@@ -59,7 +67,7 @@ func (handMenu *menuHaldToService) GetMenuByID(w http.ResponseWriter, r *http.Re
 	}
 }
 
-func (handMenu *menuHaldToService) DelMenu(w http.ResponseWriter, r *http.Request) {
+func (handMenu *menuHandToService) DelMenu(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(r.PathValue("id"), 10, 0)
 	if err != nil {
 		slog.Error("Del Menu:", "invalid id", err)
@@ -91,7 +99,7 @@ func (handMenu *menuHaldToService) DelMenu(w http.ResponseWriter, r *http.Reques
 	writeHttp(w, http.StatusNoContent, "", "")
 }
 
-func (handMenu *menuHaldToService) PostMenu(w http.ResponseWriter, r *http.Request) {
+func (handMenu *menuHandToService) PostMenu(w http.ResponseWriter, r *http.Request) {
 	var menuStruct models.MenuItem
 	if r.Header.Get("Content-Type") != "application/json" {
 		slog.Error("post the menu: content_Type must be application/json")
@@ -130,7 +138,7 @@ func (handMenu *menuHaldToService) PostMenu(w http.ResponseWriter, r *http.Reque
 	writeHttp(w, http.StatusCreated, "success", "menu created:")
 }
 
-func (handMenu *menuHaldToService) PutMenuByID(w http.ResponseWriter, r *http.Request) {
+func (handMenu *menuHandToService) PutMenuByID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(r.PathValue("id"), 10, 0)
 	if err != nil {
 		slog.Error("Put Menu by id", "Invalid id ", id)
