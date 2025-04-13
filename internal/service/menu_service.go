@@ -79,7 +79,7 @@ func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) ([]models.Me
 
 	// check for unique and negative quantity ing
 	for i, ing := range menu.Ingredients {
-		// тазалап алайық, постманнан бар болып  келуі мүмкін
+		// тазалап алайық, постманнан бар болып келуі мүмкін
 		menu.Ingredients[i].Status = new(string)
 		if _, x := forTestUniqIngs[ing.InventoryID]; x || ing.Quantity < 0 {
 			if ing.Quantity < 0 {

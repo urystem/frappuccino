@@ -2,12 +2,15 @@ package dal
 
 import (
 	"database/sql"
-	"fmt"
 
 	"frappuccino/models"
 
 	"github.com/jmoiron/sqlx"
 )
+
+type dalMenu struct {
+	db *sqlx.DB
+}
 
 type MenuDalInter interface {
 	SelectAllMenus() ([]models.MenuItem, error)
@@ -17,7 +20,11 @@ type MenuDalInter interface {
 	UpdateMenu(*models.MenuItem) ([]models.MenuIngredients, error)
 }
 
-func (core *dalCore) SelectAllMenus() ([]models.MenuItem, error) {
+func ReturnDalMenuCore(db *sqlx.DB) MenuDalInter {
+	return &dalMenu{db: db}
+}
+
+func (core *dalMenu) SelectAllMenus() ([]models.MenuItem, error) {
 	var menus []models.MenuItem
 	tx, err := core.db.Beginx()
 	if err != nil {
@@ -49,7 +56,7 @@ func (core *dalCore) SelectAllMenus() ([]models.MenuItem, error) {
 	return menus, tx.Commit()
 }
 
-func (core *dalCore) SelectMenu(id uint64) (*models.MenuItem, error) {
+func (core *dalMenu) SelectMenu(id uint64) (*models.MenuItem, error) {
 	tx, err := core.db.Beginx()
 	if err != nil {
 		return nil, err
@@ -71,7 +78,7 @@ func (core *dalCore) SelectMenu(id uint64) (*models.MenuItem, error) {
 	return &menu, tx.Commit()
 }
 
-func (core *dalCore) DeleteMenu(id uint64) (*models.MenuDepend, error) {
+func (core *dalMenu) DeleteMenu(id uint64) (*models.MenuDepend, error) {
 	tx, err := core.db.Beginx()
 	if err != nil {
 		return nil, err
@@ -111,7 +118,7 @@ func (core *dalCore) DeleteMenu(id uint64) (*models.MenuDepend, error) {
 	return nil, tx.Commit()
 }
 
-func (core *dalCore) InsertMenu(menuItems *models.MenuItem) ([]models.MenuIngredients, error) {
+func (core *dalMenu) InsertMenu(menuItems *models.MenuItem) ([]models.MenuIngredients, error) {
 	tx, err := core.db.Beginx()
 	if err != nil {
 		return nil, err
@@ -144,7 +151,7 @@ func (core *dalCore) InsertMenu(menuItems *models.MenuItem) ([]models.MenuIngred
 	return nil, tx.Commit()
 }
 
-func (core *dalCore) UpdateMenu(menuItems *models.MenuItem) ([]models.MenuIngredients, error) {
+func (core *dalMenu) UpdateMenu(menuItems *models.MenuItem) ([]models.MenuIngredients, error) {
 	tx, err := core.db.Beginx()
 	if err != nil {
 		return nil, err
@@ -164,7 +171,6 @@ func (core *dalCore) UpdateMenu(menuItems *models.MenuItem) ([]models.MenuIngred
 
 	result, err := tx.NamedExec(updateMenuQ, menuItems)
 	if err != nil {
-		fmt.Println("qalaisyn")
 		return nil, err
 	}
 
@@ -191,7 +197,7 @@ func (core *dalCore) UpdateMenu(menuItems *models.MenuItem) ([]models.MenuIngred
 	return nil, tx.Commit()
 }
 
-func (core *dalCore) checkIngs(tx *sqlx.Tx, ings []models.MenuIngredients) ([]models.MenuIngredients, error) {
+func (core *dalMenu) checkIngs(tx *sqlx.Tx, ings []models.MenuIngredients) ([]models.MenuIngredients, error) {
 	stmt, err := tx.Prepare(`SELECT TRUE FROM inventory WHERE id = $1`)
 	if err != nil {
 		return nil, err
@@ -219,7 +225,7 @@ func (core *dalCore) checkIngs(tx *sqlx.Tx, ings []models.MenuIngredients) ([]mo
 	return nil, nil
 }
 
-func (core *dalCore) insertToMenuIngs(tx *sqlx.Tx, menuID uint64, ings []models.MenuIngredients) error {
+func (core *dalMenu) insertToMenuIngs(tx *sqlx.Tx, menuID uint64, ings []models.MenuIngredients) error {
 	insert1MenuIngQ := `
 		INSERT INTO menu_item_ingredients
 		VALUES(:product_id, :inventory_id, :quantity)`

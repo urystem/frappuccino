@@ -18,7 +18,15 @@ type Order struct {
 }
 
 type OrderItem struct {
-	Err       *string `json:"error,omitempty"`
-	ProductID uint64  `json:"product_id" db:"product_id"`
-	Quantity  uint64  `json:"quantity" db:"quantity"`
+	Err           *string `json:"error,omitempty"`
+	OrderId       uint64  `json:"-" db:"order_id"`
+	ProductID     uint64  `json:"product_id" db:"product_id"`
+	Quantity      uint64  `json:"quantity" db:"quantity"`
+	NotEnoungIngs []struct {
+		Inventory_id   uint64
+		Inventory_name string
+		NotEnough      uint64
+	}`json:"not_enougn"`
 }
+
+// need not enough inventories

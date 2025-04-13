@@ -2,7 +2,13 @@ package dal
 
 import (
 	"frappuccino/models"
+
+	"github.com/jmoiron/sqlx"
 )
+
+type dalInv struct {
+	db *sqlx.DB
+}
 
 type InventoryDataAccess interface {
 	// InsertInventoryV1(*models.Inventory) error
@@ -17,7 +23,11 @@ type InventoryDataAccess interface {
 	DeleteInventory(uint64) (*models.InventoryDepend, error)
 }
 
-func (core *dalCore) InsertInventoryV1(inv *models.Inventory) error {
+func ReturnDalInvCore(db *sqlx.DB) InventoryDataAccess {
+	return &dalInv{db: db}
+}
+
+func (core *dalInv) InsertInventoryV1(inv *models.Inventory) error {
 	_, err := core.db.Exec(`
 		INSERT INTO inventory (name, description, quantity, reorder_level, unit, price)
 			VALUES($1,$2,$3,$4,$5,$6)`,
@@ -31,7 +41,7 @@ func (core *dalCore) InsertInventoryV1(inv *models.Inventory) error {
 	return err
 }
 
-func (core *dalCore) InsertInventoryV2(inv *models.Inventory) error {
+func (core *dalInv) InsertInventoryV2(inv *models.Inventory) error {
 	_, err := core.db.NamedExec(`
 		INSERT INTO inventory (name, description, quantity, reorder_level, unit, price)
 			VALUES (:name, :description, :quantity, :reorder_level, :unit, :price)
@@ -39,7 +49,7 @@ func (core *dalCore) InsertInventoryV2(inv *models.Inventory) error {
 	return err
 }
 
-func (core *dalCore) InsertInventoryV3(inv *models.Inventory) error {
+func (core *dalInv) InsertInventoryV3(inv *models.Inventory) error {
 	return core.db.QueryRow(`
 	INSERT INTO inventory (name, description, quantity, reorder_level, unit, price)
 		VALUES ($1,$2,$3,$4,$5,$6)
@@ -52,20 +62,20 @@ func (core *dalCore) InsertInventoryV3(inv *models.Inventory) error {
 		inv.Price).Scan(&inv.ID)
 }
 
-func (core *dalCore) InsertInventoryV4(inv *models.Inventory) error {
+func (core *dalInv) InsertInventoryV4(inv *models.Inventory) error {
 	return core.db.Get(&inv.ID, `
     INSERT INTO inventory (name, description, quantity, reorder_level, unit, price)
     VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING id`, inv.Name, inv.Descrip, inv.Quantity, inv.ReorderLvl, inv.Unit, inv.Price)
 }
 
-func (core *dalCore) InsertInventoryV5(inv *models.Inventory) error {
+func (core *dalInv) InsertInventoryV5(inv *models.Inventory) error {
 	tx, err := core.db.Beginx()
 	if err != nil {
 		return err
 	}
 	// var ss any
-	
+
 	defer tx.Rollback()
 	// tx.QueryRowx также подходит
 	if err = tx.QueryRow(`
@@ -90,7 +100,7 @@ func (core *dalCore) InsertInventoryV5(inv *models.Inventory) error {
 	return tx.Commit()
 }
 
-func (core *dalCore) InsertInventoryV6(inv *models.Inventory) error {
+func (core *dalInv) InsertInventoryV6(inv *models.Inventory) error {
 	tx, err := core.db.Beginx()
 	if err != nil {
 		return err
@@ -119,18 +129,18 @@ func (core *dalCore) InsertInventoryV6(inv *models.Inventory) error {
 	return tx.Commit()
 }
 
-func (core *dalCore) SelectAllInventories() ([]models.Inventory, error) {
+func (core *dalInv) SelectAllInventories() ([]models.Inventory, error) {
 	var invts []models.Inventory
 	err := core.db.Select(&invts, "SELECT * FROM inventory")
 	return invts, err
 }
 
-func (core *dalCore) SelectInventory(id uint64) (*models.Inventory, error) {
+func (core *dalInv) SelectInventory(id uint64) (*models.Inventory, error) {
 	var inv models.Inventory
 	return &inv, core.db.Get(&inv, "SELECT * FROM inventory WHERE id = $1", id)
 }
 
-func (core *dalCore) UpdateInventory(inv *models.Inventory) error {
+func (core *dalInv) UpdateInventory(inv *models.Inventory) error {
 	tx, err := core.db.Beginx()
 	if err != nil {
 		return err
@@ -180,7 +190,7 @@ func (core *dalCore) UpdateInventory(inv *models.Inventory) error {
 	return tx.Commit()
 }
 
-func (core *dalCore) DeleteInventory(id uint64) (*models.InventoryDepend, error) {
+func (core *dalInv) DeleteInventory(id uint64) (*models.InventoryDepend, error) {
 	tx, err := core.db.Beginx()
 	if err != nil {
 		return nil, err

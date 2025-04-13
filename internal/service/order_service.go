@@ -21,7 +21,7 @@ type OrdServiceInter interface {
 	// GetServicePopularItem() ([]models.OrderItem, error)
 }
 
-func ReturnOrdSerStruct(ord dal.OrderDalInter) *ordServiceToDal {
+func ReturnOrdSerStruct(ord dal.OrderDalInter) OrdServiceInter {
 	return &ordServiceToDal{ordDalInt: ord}
 }
 
