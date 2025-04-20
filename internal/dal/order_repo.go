@@ -157,16 +157,19 @@ func (core *dalOrder) inventoryUpdaterByOrder(tx *sqlx.Tx, id uint64, items []mo
 	FROM inventory AS inv 
 	JOIN menu_item_ingredients AS ings ON inv.id=ings.inventory_id 
 	WHERE ings.product_id = $1 AND inv.quantity-(ings.quantity * $2) <0`
-	stmt2, err := tx.Prepare(is)
-
-	stmt3, err := tx.PrepareNamed(`INSERT INTO order_items VALUES(:order_id, :product_id, :quantity)`)
+	stmt2, err := tx.Prepare(needCheck)
 	if err != nil {
 		return err
 	}
 	defer stmt2.Close()
 
+	stmt3, err := tx.PrepareNamed(`INSERT INTO order_items VALUES(:order_id, :product_id, :quantity)`)
+	if err != nil {
+		return err
+	}
+	defer stmt3.Close()
+
 	for i, v := range items {
-		v.
 		var isHasInMenu bool
 		err = stmt.QueryRow(v.ProductID).Scan(&isHasInMenu)
 		if err != nil {
@@ -191,4 +194,4 @@ func (core *dalOrder) inventoryUpdaterByOrder(tx *sqlx.Tx, id uint64, items []mo
 	return err
 }
 
-//SELECT inv.id, inv.quantity-(ings.quantity * $1) AS notEnough FROM inventory AS inv JOIN menu_item_ingredients AS ings ON inv.id=ings.inventory_id WHERE ings.product_id = $2 AND inv.quantity-(ings.quantity * $1)<0;
+// SELECT inv.id, inv.quantity-(ings.quantity * $1) AS notEnough FROM inventory AS inv JOIN menu_item_ingredients AS ings ON inv.id=ings.inventory_id WHERE ings.product_id = $2 AND inv.quantity-(ings.quantity * $1)<0;
