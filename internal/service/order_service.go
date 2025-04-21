@@ -17,6 +17,7 @@ type OrdServiceInter interface {
 	RemoveOrder(uint64) error
 	CreateOrder(*models.Order) error
 	UpgradeOrder(id uint64, ord *models.Order) error
+	ShutOrder(uint64) error
 }
 
 func ReturnOrdSerStruct(ord dal.OrderDalInter) OrdServiceInter {
@@ -36,19 +37,21 @@ func (ser *ordServiceToDal) RemoveOrder(id uint64) error {
 }
 
 func (ser *ordServiceToDal) CreateOrder(ord *models.Order) error {
-	err := ser.checkOrderStruct(ord)
-	if err != nil {
+	if err := ser.checkOrderStruct(ord); err != nil {
 		return err
 	}
 	return ser.ordDalInt.InsertOrder(ord)
 }
 
 func (ser *ordServiceToDal) UpgradeOrder(id uint64, ord *models.Order) error {
-	err := ser.checkOrderStruct(ord)
-	if err != nil {
+	if err := ser.checkOrderStruct(ord); err != nil {
 		return err
 	}
 	return ser.ordDalInt.UpdateOrder(id, ord)
+}
+
+func (ser *ordServiceToDal) ShutOrder(uint64) error {
+	return nil
 }
 
 func (ser *ordServiceToDal) checkOrderStruct(ord *models.Order) error {
@@ -70,7 +73,7 @@ func (ser *ordServiceToDal) checkOrderStruct(ord *models.Order) error {
 		forTestUniqItems[item.ProductID] = i
 	}
 
-	if len(forTestUniqItems) == 0 {
+	if len(forTestUniqItems) == len(ord.Items) {
 		return nil
 	}
 

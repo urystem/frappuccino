@@ -119,6 +119,14 @@ func (core *dalOrder) UpdateOrder(id uint64, ord *models.Order) error {
 	if err != nil {
 		return err
 	}
+	_, err = tx.NamedExec(`UPDATE orders 
+		SET 
+			customer_name = :customer_name, 
+			allergens = :allergens
+		WHERE id=:id`, ord)
+	if err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
@@ -162,7 +170,7 @@ func (core *dalOrder) inventoryUpdaterByOrder(tx *sqlx.Tx, id uint64, items *[]m
 	// menuде бар жоғын тексереміз
 	// stmt, err := tx.Prepare(`SELECT TRUE FROM menu WHERE id = $1`)
 	// EXISTS возвращает true или false
-	stmt, err := tx.Prepare(`SELECT EXISTS(SELECT 1 FROM menu WHERE id = $1)`)
+	stmt, err := tx.Prepare(`SELECT EXISTS(SELECT 1 FROM menu_items WHERE id = $1)`)
 	if err != nil {
 		return err
 	}
@@ -196,6 +204,7 @@ func (core *dalOrder) inventoryUpdaterByOrder(tx *sqlx.Tx, id uint64, items *[]m
 	defer stmt3.Close()
 
 	var wasError bool
+	var total float64
 	for i, item := range *items {
 		var isHasInMenu bool
 		if err = stmt.QueryRow(item.ProductID).Scan(&isHasInMenu); err != nil {
@@ -205,7 +214,7 @@ func (core *dalOrder) inventoryUpdaterByOrder(tx *sqlx.Tx, id uint64, items *[]m
 			*(*items)[i].Err = "not found in menu"
 			wasError = true
 
-		} else if err = stmt2.Select((*items)[i].NotEnoungIngs, item.ProductID, item.Quantity); err != nil {
+		} else if err = stmt2.Select(&(*items)[i].NotEnoungIngs, item.ProductID, item.Quantity); err != nil {
 			return err
 		} else if len((*items)[i].NotEnoungIngs) != 0 {
 			(*items)[i].Err = new(string)
