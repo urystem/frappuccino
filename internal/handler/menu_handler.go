@@ -107,13 +107,14 @@ func (handMenu *menuHandToService) PostMenu(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&menuStruct); err != nil {
+	err := json.NewDecoder(r.Body).Decode(&menuStruct)
+	if err != nil {
 		slog.Error("incorrect input to post menu", "error", err)
 		writeHttp(w, http.StatusBadRequest, "input json", err.Error())
 		return
 	}
 
-	ings, err := handMenu.menuServInt.CreateMenu(&menuStruct)
+	err = handMenu.menuServInt.CreateMenu(&menuStruct)
 	if err != nil {
 		slog.Error("Post menu", "error", err)
 
@@ -127,7 +128,7 @@ func (handMenu *menuHandToService) PostMenu(w http.ResponseWriter, r *http.Reque
 			code = http.StatusNotFound
 		}
 
-		err = bodyJsonStruct(w, ings, code)
+		err = bodyJsonStruct(w, menuStruct.Ingredients, code)
 		if err != nil {
 			slog.Error("Post menu: Error in decoder")
 		}
@@ -161,7 +162,7 @@ func (handMenu *menuHandToService) PutMenuByID(w http.ResponseWriter, r *http.Re
 	}
 
 	menuStruct.ID = id
-	ings, err := handMenu.menuServInt.UpgradeMenu(&menuStruct)
+	err = handMenu.menuServInt.UpgradeMenu(&menuStruct)
 	if err != nil {
 		slog.Error("Put menu by id", "error", err)
 		code := http.StatusInternalServerError
@@ -177,7 +178,7 @@ func (handMenu *menuHandToService) PutMenuByID(w http.ResponseWriter, r *http.Re
 			return
 		}
 
-		err = bodyJsonStruct(w, ings, code)
+		err = bodyJsonStruct(w, menuStruct.Ingredients, code)
 		if err != nil {
 			slog.Error("put menu: Error in decoder")
 		}

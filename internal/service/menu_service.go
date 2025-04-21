@@ -16,8 +16,8 @@ type MenuServiceInter interface {
 	CollectMenus() ([]models.MenuItem, error)
 	TakeMenu(uint64) (*models.MenuItem, error)
 	DelServiceMenuById(uint64) (*models.MenuDepend, error)
-	CreateMenu(*models.MenuItem) ([]models.MenuIngredients, error)
-	UpgradeMenu(*models.MenuItem) ([]models.MenuIngredients, error)
+	CreateMenu(*models.MenuItem) error
+	UpgradeMenu(*models.MenuItem) error
 }
 
 func ReturnMenuSerStruct(interMenuDal dal.MenuDalInter) MenuServiceInter {
@@ -36,43 +36,43 @@ func (ser *menuServiceToDal) DelServiceMenuById(id uint64) (*models.MenuDepend, 
 	return ser.menuDal.DeleteMenu(id)
 }
 
-func (ser *menuServiceToDal) CreateMenu(menu *models.MenuItem) ([]models.MenuIngredients, error) {
-	ings, err := ser.checkMenuStruct(menu)
+func (ser *menuServiceToDal) CreateMenu(menu *models.MenuItem) error {
+	err := ser.checkMenuStruct(menu)
 	if err != nil {
-		return ings, err
+		return err
 	}
 	return ser.menuDal.InsertMenu(menu)
 }
 
-func (ser *menuServiceToDal) UpgradeMenu(menu *models.MenuItem) ([]models.MenuIngredients, error) {
-	ings, err := ser.checkMenuStruct(menu)
+func (ser *menuServiceToDal) UpgradeMenu(menu *models.MenuItem) error {
+	err := ser.checkMenuStruct(menu)
 	if err != nil {
-		return ings, err
+		return err
 	}
 
 	return ser.menuDal.UpdateMenu(menu)
 }
 
-func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) ([]models.MenuIngredients, error) {
+func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) error {
 	if isInvalidName(menu.Name) {
-		return nil, errors.New("invalid name")
+		return errors.New("invalid name")
 	}
 
 	menu.Description = strings.TrimSpace(menu.Description)
 
 	if len(menu.Description) == 0 {
-		return nil, errors.New("empty description")
+		return errors.New("empty description")
 	}
 	if len(menu.Tags) == 0 {
-		return nil, errors.New("no tags")
+		return errors.New("no tags")
 	}
 
 	if menu.Price < 0 {
-		return nil, errors.New("negative menu price")
+		return errors.New("negative menu price")
 	}
 
 	if len(menu.Ingredients) == 0 {
-		return nil, errors.New("empty ingridents")
+		return errors.New("empty ingridents")
 	}
 
 	forTestUniqIngs, invalids := map[uint64]struct{}{}, map[uint64]struct{}{}
@@ -92,12 +92,12 @@ func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) ([]models.Me
 	}
 	// if all is correct
 	if len(invalids) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	//"Ленивое удаление" (сдвиг влево)
 	// Фильтрация слайса: сдвигаем элементы, которые не нужно удалять, влево
-	invalidCount := 0
+	var invalidCount uint64
 	for _, ing := range menu.Ingredients {
 		// ing := menu.Ingredients[i]
 		if _, x := invalids[ing.InventoryID]; x {
@@ -109,5 +109,6 @@ func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) ([]models.Me
 			invalidCount++
 		}
 	}
-	return menu.Ingredients[:invalidCount], models.InvalidIngs
+	menu.Ingredients = menu.Ingredients[:invalidCount]
+	return models.InvalidIngs
 }

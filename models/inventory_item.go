@@ -28,3 +28,4 @@ type InventoryDepend struct {
 		Name      string `json:"name" db:"name"`
 	} `json:"menu_items"`
 }
+

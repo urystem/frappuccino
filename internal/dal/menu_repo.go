@@ -16,8 +16,8 @@ type MenuDalInter interface {
 	SelectAllMenus() ([]models.MenuItem, error)
 	SelectMenu(uint64) (*models.MenuItem, error)
 	DeleteMenu(uint64) (*models.MenuDepend, error)
-	InsertMenu(*models.MenuItem) ([]models.MenuIngredients, error)
-	UpdateMenu(*models.MenuItem) ([]models.MenuIngredients, error)
+	InsertMenu(*models.MenuItem) error
+	UpdateMenu(*models.MenuItem) error
 }
 
 func ReturnDalMenuCore(db *sqlx.DB) MenuDalInter {
@@ -118,16 +118,16 @@ func (core *dalMenu) DeleteMenu(id uint64) (*models.MenuDepend, error) {
 	return nil, tx.Commit()
 }
 
-func (core *dalMenu) InsertMenu(menuItems *models.MenuItem) ([]models.MenuIngredients, error) {
+func (core *dalMenu) InsertMenu(menuItems *models.MenuItem) error {
 	tx, err := core.db.Beginx()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer tx.Rollback()
 
-	notFoundIngs, err := core.checkIngs(tx, menuItems.Ingredients)
+	err = core.checkIngs(tx, &menuItems.Ingredients)
 	if err != nil {
-		return notFoundIngs, err
+		return err
 	}
 
 	insertMenuQ := `
@@ -142,25 +142,25 @@ func (core *dalMenu) InsertMenu(menuItems *models.MenuItem) ([]models.MenuIngred
 		menuItems.Allergens,
 		menuItems.Price).Scan(&menuItems.ID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	err = core.insertToMenuIngs(tx, menuItems.ID, menuItems.Ingredients)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return nil, tx.Commit()
+	return tx.Commit()
 }
 
-func (core *dalMenu) UpdateMenu(menuItems *models.MenuItem) ([]models.MenuIngredients, error) {
+func (core *dalMenu) UpdateMenu(menuItems *models.MenuItem) error {
 	tx, err := core.db.Beginx()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer tx.Rollback()
 
-	notFoundIngs, err := core.checkIngs(tx, menuItems.Ingredients)
+	err = core.checkIngs(tx, &menuItems.Ingredients)
 	if err != nil {
-		return notFoundIngs, err
+		return err
 	}
 
 	updateMenuQ := `
@@ -171,16 +171,16 @@ func (core *dalMenu) UpdateMenu(menuItems *models.MenuItem) ([]models.MenuIngred
 
 	result, err := tx.NamedExec(updateMenuQ, menuItems)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	affects, err := result.RowsAffected()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if affects == 0 {
-		return nil, models.ErrNotFound
+		return models.ErrNotFound
 	}
 
 	_, err = tx.Exec(`
@@ -188,41 +188,43 @@ func (core *dalMenu) UpdateMenu(menuItems *models.MenuItem) ([]models.MenuIngred
 		WHERE product_id = $1
 	`, menuItems.ID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	err = core.insertToMenuIngs(tx, menuItems.ID, menuItems.Ingredients)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return nil, tx.Commit()
+	return tx.Commit()
 }
 
-func (core *dalMenu) checkIngs(tx *sqlx.Tx, ings []models.MenuIngredients) ([]models.MenuIngredients, error) {
+func (core *dalMenu) checkIngs(tx *sqlx.Tx, ings *[]models.MenuIngredients) error {
 	stmt, err := tx.Prepare(`SELECT TRUE FROM inventory WHERE id = $1`)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer stmt.Close()
 	var notFoundCount uint64
-	for _, v := range ings {
+	for _, v := range *ings {
 		var exists bool
 
 		err = stmt.QueryRow(v.InventoryID).Scan(&exists)
 
 		if err == sql.ErrNoRows {
+			v.Status = new(string)
 			*v.Status = "not found"
-			ings[notFoundCount] = v
+			(*ings)[notFoundCount] = v
 			notFoundCount++
 		} else if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	if notFoundCount != 0 {
-		return ings[:notFoundCount], models.ErrIngsNotFound
+		*ings = (*ings)[:notFoundCount]
+		return models.ErrIngsNotFound
 	}
 
-	return nil, nil
+	return nil
 }
 
 func (core *dalMenu) insertToMenuIngs(tx *sqlx.Tx, menuID uint64, ings []models.MenuIngredients) error {

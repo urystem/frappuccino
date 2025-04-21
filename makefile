@@ -1,19 +1,19 @@
 run:
-	clean
+	make clean
 	docker-compose up --build
 
 cleanRun:
-	build
+	make build
 	docker-compose up
 
 build:
-	clean
+	make clean
 	docker-compose build
-	prune
+	make prune
 
 clean:
-	stop
-	prune
+	make stop
+	make prune
 
 prune:
 	docker image prune -f
