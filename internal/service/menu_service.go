@@ -80,9 +80,10 @@ func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) ([]models.Me
 	// check for unique and negative quantity ing
 	for i, ing := range menu.Ingredients {
 		// тазалап алайық, постманнан бар болып келуі мүмкін
-		menu.Ingredients[i].Status = new(string)
+		menu.Ingredients[i].Status = nil
 		if _, x := forTestUniqIngs[ing.InventoryID]; x || ing.Quantity < 0 {
 			if ing.Quantity < 0 {
+				menu.Ingredients[i].Status = new(string)
 				*menu.Ingredients[i].Status = "invalid quantity"
 			}
 			invalids[ing.InventoryID] = struct{}{}
@@ -97,8 +98,8 @@ func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) ([]models.Me
 	//"Ленивое удаление" (сдвиг влево)
 	// Фильтрация слайса: сдвигаем элементы, которые не нужно удалять, влево
 	invalidCount := 0
-	for i := range menu.Ingredients {
-		ing := menu.Ingredients[i]
+	for _, ing := range menu.Ingredients {
+		// ing := menu.Ingredients[i]
 		if _, x := invalids[ing.InventoryID]; x {
 			// Если элемент не нужно удалять, ставим его в начало
 			if *ing.Status == "" {

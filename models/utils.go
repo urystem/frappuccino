@@ -13,4 +13,6 @@ var (
 	ErrOrdNotFoundItem = errors.New(" not found item in menu")
 	ErrOrdStatusClosed = errors.New(" closed")
 	ErrOrdNotEnough    = errors.New(" Not enough quantity")
+	ErrOrderItems      = errors.New("was error")
+	ErrInputOrder      = errors.New("invalid input order struct")
 )

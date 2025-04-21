@@ -23,10 +23,10 @@ type OrderItem struct {
 	ProductID     uint64  `json:"product_id" db:"product_id"`
 	Quantity      uint64  `json:"quantity" db:"quantity"`
 	NotEnoungIngs []struct {
-		Inventory_id   uint64
-		Inventory_name string
-		NotEnough      uint64
-	}`json:"not_enougn"`
+		Inventory_id   uint64 `json:"ingredient_id" db:"id"`
+		Inventory_name string `json:"inventory_name" db:"inventory_name"`
+		NotEnough      uint64 `json:"not_enough" db:"not_enough"`
+	} `json:"not_enough,omitempty"`
 }
 
 // need not enough inventories
