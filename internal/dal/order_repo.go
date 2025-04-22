@@ -10,7 +10,7 @@ import (
 )
 
 type dalOrder struct {
-	db *sqlx.DB
+	database *sqlx.DB
 }
 
 type OrderDalInter interface {
@@ -18,15 +18,16 @@ type OrderDalInter interface {
 	SelectOrder(uint64) (*models.Order, error)
 	DeleteOrder(uint64) error
 	InsertOrder(*models.Order) error
-	UpdateOrder(id uint64, ord *models.Order) error
+	UpdateOrder(uint64, *models.Order) error
+	CloseOrder(uint64) error
 }
 
-func ReturnDulOrderCore(db *sqlx.DB) OrderDalInter {
-	return &dalOrder{db: db}
+func ReturnDulOrderDB(db *sqlx.DB) OrderDalInter {
+	return &dalOrder{database: db}
 }
 
-func (core *dalOrder) SelectAllOrders() ([]models.Order, error) {
-	tx, err := core.db.Beginx()
+func (db *dalOrder) SelectAllOrders() ([]models.Order, error) {
+	tx, err := db.database.Beginx()
 	if err != nil {
 		return nil, err
 	}
@@ -55,8 +56,8 @@ func (core *dalOrder) SelectAllOrders() ([]models.Order, error) {
 	return orders, tx.Commit()
 }
 
-func (core *dalOrder) SelectOrder(id uint64) (*models.Order, error) {
-	tx, err := core.db.Beginx()
+func (db *dalOrder) SelectOrder(id uint64) (*models.Order, error) {
+	tx, err := db.database.Beginx()
 	if err != nil {
 		return nil, err
 	}
@@ -74,13 +75,14 @@ func (core *dalOrder) SelectOrder(id uint64) (*models.Order, error) {
 	return &order, tx.Commit()
 }
 
-func (core *dalOrder) DeleteOrder(id uint64) error {
-	tx, err := core.db.Beginx()
+func (db *dalOrder) DeleteOrder(id uint64) error {
+	tx, err := db.database.Beginx()
 	if err != nil {
 		return err
 	}
 	// егер әлі жабылмаған тапсырыс болса inventory ді түгендейді
-	if err = core.inventoryUpdaterByOrder(tx, id, nil); err != nil {
+	err = db.inventoryUpdaterByOrderAndSetTotal(tx, id, nil)
+	if err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
 	// жәй өшіре саламыз. order_items тен өзі өшіп кетеді
@@ -91,8 +93,8 @@ func (core *dalOrder) DeleteOrder(id uint64) error {
 	return tx.Commit()
 }
 
-func (core *dalOrder) InsertOrder(ord *models.Order) error {
-	tx, err := core.db.Beginx()
+func (db *dalOrder) InsertOrder(ord *models.Order) error {
+	tx, err := db.database.Beginx()
 	if err != nil {
 		return err
 	}
@@ -102,27 +104,29 @@ func (core *dalOrder) InsertOrder(ord *models.Order) error {
 	RETURNING id`, ord.CustomerName, ord.Allergens).Scan(&ord.ID); err != nil {
 		return err
 	}
-	err = core.inventoryUpdaterByOrder(tx, ord.ID, &ord.Items)
+	err = db.inventoryUpdaterByOrderAndSetTotal(tx, ord.ID, &ord.Items)
 	if err != nil {
 		return err
 	}
+
 	return tx.Commit()
 }
 
-func (core *dalOrder) UpdateOrder(id uint64, ord *models.Order) error {
-	tx, err := core.db.Beginx()
+func (db *dalOrder) UpdateOrder(id uint64, ord *models.Order) error {
+	tx, err := db.database.Beginx()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	err = core.inventoryUpdaterByOrder(tx, id, &ord.Items)
+	err = db.inventoryUpdaterByOrderAndSetTotal(tx, id, &ord.Items)
 	if err != nil {
 		return err
 	}
 	_, err = tx.NamedExec(`UPDATE orders 
 		SET 
 			customer_name = :customer_name, 
-			allergens = :allergens
+			allergens = :allergens,
+			updated_at = CURRENT_TIMESTAMP
 		WHERE id=:id`, ord)
 	if err != nil {
 		return err
@@ -130,14 +134,22 @@ func (core *dalOrder) UpdateOrder(id uint64, ord *models.Order) error {
 	return tx.Commit()
 }
 
-// delete, insert, update
-func (core *dalOrder) inventoryUpdaterByOrder(tx *sqlx.Tx, id uint64, items *[]models.OrderItem) error {
-	// getting a status of order
+func (db *dalOrder) getStatus(tx *sqlx.Tx, id uint64) (string, error) {
 	var status string
 	err := tx.Get(&status, `SELECT status FROM orders WHERE id=$1`, id)
 	if err == sql.ErrNoRows {
-		return models.ErrNotFound
+		return "", models.ErrNotFound
 	} else if err != nil {
+		return "", err
+	}
+	return status, nil
+}
+
+// delete, insert, update
+func (db *dalOrder) inventoryUpdaterByOrderAndSetTotal(tx *sqlx.Tx, id uint64, items *[]models.OrderItem) error {
+	// getting a status of order
+	status, err := db.getStatus(tx, id)
+	if err != nil {
 		return err
 	}
 	// тапсырыс әлі орындалмаған болса, қосамыз
@@ -204,7 +216,6 @@ func (core *dalOrder) inventoryUpdaterByOrder(tx *sqlx.Tx, id uint64, items *[]m
 	defer stmt3.Close()
 
 	var wasError bool
-	var total float64
 	for i, item := range *items {
 		var isHasInMenu bool
 		if err = stmt.QueryRow(item.ProductID).Scan(&isHasInMenu); err != nil {
@@ -250,9 +261,62 @@ func (core *dalOrder) inventoryUpdaterByOrder(tx *sqlx.Tx, id uint64, items *[]m
 		FROM menu_item_ingredients AS ings
 		JOIN order_items AS ord ON ings.product_id = ord.product_id
 		WHERE inv.id = ings.inventory_id AND ord.order_id = $1`, id)
-	return err
+	if err != nil {
+		return err
+	}
+
+	totalQ := `
+	SELECT SUM(m.price * o.quantity)
+	FROM menu_items AS m
+	JOIN order_items AS o ON m.id = o.product_id
+	WHERE o.order_id = $1`
+
+	var total float64
+	err = tx.Get(&total, totalQ, id)
+	if err != nil {
+		return err
+	}
+
+	orderUpdateTotal := `UPDATE orders
+	SET total = $1
+	WHERE id = $2`
+
+	res, err := tx.Exec(orderUpdateTotal, total, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	} else if rowsAffected == 0 {
+		return errors.New("no rows were updated — order with id not found")
+	}
+	return nil
 }
 
+func (db *dalOrder) CloseOrder(id uint64) error {
+	tx, err := db.database.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	status, err := db.getStatus(tx, id)
+	if err != nil {
+		return err
+	}
+	if status != "processing" {
+		return models.ErrOrdStatusClosed
+	}
+	_, err = tx.Exec(`UPDATE orders
+		SET status = 'accepted',
+		updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
 // SELECT inv.id, inv.quantity-(ings.quantity * $1) AS notEnough FROM inventory AS inv JOIN menu_item_ingredients AS ings ON inv.id=ings.inventory_id WHERE ings.product_id = $2 AND inv.quantity-(ings.quantity * $1)<0;
 
 // SELECT inv.id, inv.quantity-(ings.quantity * $1) AS notEnough FROM inventory AS inv JOIN menu_item_ingredients AS ings ON inv.id=ings.inventory_id WHERE ings.product_id = $2 AND inv.quantity-(ings.quantity * $1)<0;

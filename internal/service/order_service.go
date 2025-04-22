@@ -18,6 +18,7 @@ type OrdServiceInter interface {
 	CreateOrder(*models.Order) error
 	UpgradeOrder(id uint64, ord *models.Order) error
 	ShutOrder(uint64) error
+	
 }
 
 func ReturnOrdSerStruct(ord dal.OrderDalInter) OrdServiceInter {
@@ -50,8 +51,8 @@ func (ser *ordServiceToDal) UpgradeOrder(id uint64, ord *models.Order) error {
 	return ser.ordDalInt.UpdateOrder(id, ord)
 }
 
-func (ser *ordServiceToDal) ShutOrder(uint64) error {
-	return nil
+func (ser *ordServiceToDal) ShutOrder(id uint64) error {
+	return ser.ordDalInt.CloseOrder(id)
 }
 
 func (ser *ordServiceToDal) checkOrderStruct(ord *models.Order) error {

@@ -21,6 +21,7 @@ type ordHandInt interface {
 	PostOrder(w http.ResponseWriter, r *http.Request)
 	PutOrderByID(w http.ResponseWriter, r *http.Request)
 	PostOrdCloseById(w http.ResponseWriter, r *http.Request)
+	
 }
 
 func ReturnOrdHaldStruct(ordSerInt service.OrdServiceInter) ordHandInt {
@@ -179,16 +180,7 @@ func (h *ordHandToService) PostOrdCloseById(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-// func (h *ordHandToService) TotalSales(w http.ResponseWriter, r *http.Request) {
-// 	if total, err := h.orderService.GetServiseTotalSales(); err != nil {
-// 		slog.Error("Get total sales", "error", err)
-// 		writeHttp(w, http.StatusInternalServerError, "failed to get total sales:", err.Error())
-// 	} else {
-// 		slog.Info("Succes", "Get total sales:", total)
-// 		w.Header().Set("Content-Type", "application/json")
-// 		json.NewEncoder(w).Encode(map[string]float64{"total_sales": total})
-// 	}
-// }
+
 
 // func (h *ordHandToService) PopularItem(w http.ResponseWriter, r *http.Request) {
 // 	if sortedItems, err := h.orderService.GetServicePopularItem(); err != nil {
