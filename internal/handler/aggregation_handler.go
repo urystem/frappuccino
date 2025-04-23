@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -58,6 +57,18 @@ func (h *aggregationHandler) PopularItems(w http.ResponseWriter, r *http.Request
 func (h *aggregationHandler) NumberOfOrderedItems(w http.ResponseWriter, r *http.Request) {
 	startDate := r.URL.Query().Get("startDate")
 	endDate := r.URL.Query().Get("endDate")
-	fmt.Println(startDate, endDate)
-	h.aggreService.NumberOfOrderedItemsService(startDate, endDate)
+
+	numberOf, err := h.aggreService.NumberOfOrderedItemsService(startDate, endDate)
+	if err != nil {
+		slog.Error("Get number of sales", "error", err)
+		writeHttp(w, http.StatusInternalServerError, "failed to get number sales:", err.Error())
+		return
+	}
+
+	err = bodyJsonStruct(w, numberOf, http.StatusOK)
+	if err != nil {
+		slog.Error("Get number of sales", "error", err)
+	} else {
+		slog.Info("succes")
+	}
 }

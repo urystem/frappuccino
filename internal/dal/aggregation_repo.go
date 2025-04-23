@@ -1,7 +1,7 @@
 package dal
 
 import (
-	"fmt"
+	"time"
 
 	"frappuccino/models"
 
@@ -15,7 +15,7 @@ type dalAggregation struct {
 type AggregationDalInter interface {
 	AmountSales() (float64, error)
 	Popularies() (*models.PopularItems, error)
-	CountOfOrderedItems(string, string) (map[string]uint64, error)
+	CountOfOrderedItems(start, end *time.Time) (map[string]uint64, error)
 }
 
 func ReturnDulAggregationDB(db *sqlx.DB) AggregationDalInter {
@@ -56,17 +56,40 @@ func (db *dalAggregation) Popularies() (*models.PopularItems, error) {
 	return &popularies, err
 }
 
-func (db *dalAggregation) CountOfOrderedItems(start, end string) (map[string]uint64, error) {
-	popularsQ := `
+func (db *dalAggregation) CountOfOrderedItems(start, end *time.Time) (map[string]uint64, error) {
+	// countItemsQ := `
+	// 	SELECT m.name, SUM(oi.quantity) AS sum
+	// 		FROM order_items AS oi
+	// 		JOIN menu_items AS m ON m.id = oi.product_id
+	// 		JOIN orders AS o ON o.id = oi.order_id
+	// 		WHERE o.status = 'accepted' AND o.created_at BETWEEN $1 and $2
+	// 		GROUP BY m.name
+	// 		ORDER BY sum DESC`
+
+	// countItemsQ := `
+	// 		SELECT m.name, SUM(oi.quantity) AS sum
+	// 			FROM order_items AS oi
+	// 			JOIN menu_items AS m ON m.id = oi.product_id
+	// 			JOIN orders AS o ON o.id = oi.order_id
+	// 			WHERE o.status = 'accepted' AND o.created_at BETWEEN '10-11-2023' and '11-11-2025'
+	// 			GROUP BY m.name
+	// 			ORDER BY sum DESC`
+
+	countItemsQ2 := `
 		SELECT m.name, SUM(oi.quantity) AS sum
 			FROM order_items AS oi
 			JOIN menu_items AS m ON m.id = oi.product_id
 			JOIN orders AS o ON o.id = oi.order_id
-			WHERE o.status = 'accepted' AND o.created_at BETWEEN '2024-01-10' and '2025-01-10'
+			WHERE o.status = 'accepted' AND
+				($1::date IS NULL OR o.created_at::date >= $1::date) AND
+				($2::date IS NULL OR o.created_at::date <= $2::date)
 			GROUP BY m.name
 			ORDER BY sum DESC`
 
-	rows, err := db.database.Query(popularsQ)
+	// Было (::date)	Стало (::timestamptz)
+	// Усекалась только дата	Учитывается и время
+	// 2024-11-10 → 00:00	2024-11-10T13:45:00+06:00
+	rows, err := db.database.Query(countItemsQ2, start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +106,5 @@ func (db *dalAggregation) CountOfOrderedItems(start, end string) (map[string]uin
 		}
 		countItems[name] = count
 	}
-	fmt.Println(countItems)
 	return countItems, nil
 }
