@@ -3,29 +3,35 @@ package router
 import (
 	"net/http"
 
+	"frappuccino/internal/router/aggregation" // for mux
+
 	"github.com/jmoiron/sqlx"
 )
 
 func Allrouter(db *sqlx.DB) *http.ServeMux {
 	muxRoot := http.NewServeMux()
 
-	inventoryRouter := InventoryRouter(db)
-	addPrefixToRouter(muxRoot, inventoryRouter, "/inventory")
+	inventoryRouter := inventoryRouter(db)
+	addPrefixToRouter("/inventory", muxRoot, inventoryRouter)
 
 	menuMux := menuRouter(db)
-	addPrefixToRouter(muxRoot, menuMux, "/menu")
+	addPrefixToRouter("/menu", muxRoot, menuMux)
 
 	orderMux := orderRouter(db)
-	addPrefixToRouter(muxRoot, orderMux, "/orders")
+	addPrefixToRouter("/orders", muxRoot, orderMux)
 
-	reportsMux := aggregationRouter(db)
-	addPrefixToRouter(muxRoot, reportsMux, "/reports")
+	aggregations := aggregation.NewAggregationRouter(db)
 
-	
+	reports := aggregations.AggregationReportRouter()
+	addPrefixToRouter("/reports", muxRoot, reports)
+
+	asRoot := aggregations.AggregationsAsRootMux()
+	addPrefixToRouter("", muxRoot, asRoot)
+
 	return muxRoot
 }
 
-func addPrefixToRouter(mux, child *http.ServeMux, prefix string) {
+func addPrefixToRouter(prefix string, mux, child *http.ServeMux) {
 	// "/" ті пайдалануға болмайт panic болады
 	// "/" ПАЙДАЛАНУ ОПАСНО
 	// mux.Handle("/reports/", http.StripPrefix("/reports", reportsMux))

@@ -1,11 +1,11 @@
 package handler
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 
 	"frappuccino/internal/service"
-	"frappuccino/models"
 )
 
 type aggregationHandler struct {
@@ -15,6 +15,7 @@ type aggregationHandler struct {
 type AggregationHandInter interface {
 	TotalSales(w http.ResponseWriter, r *http.Request)
 	PopularItems(w http.ResponseWriter, r *http.Request)
+	NumberOfOrderedItems(w http.ResponseWriter, r *http.Request)
 }
 
 func ReturnAggregationHandInter(aggreSer service.AggregationServiceInter) AggregationHandInter {
@@ -46,10 +47,17 @@ func (h *aggregationHandler) PopularItems(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = bodyJsonStruct(w, struct{ Popular []models.PopularItems }{popularItems}, http.StatusOK)
+	err = bodyJsonStruct(w, popularItems, http.StatusOK)
 	if err != nil {
 		slog.Error("Get popular sales", "error", err)
 	} else {
 		slog.Info("succes")
 	}
+}
+
+func (h *aggregationHandler) NumberOfOrderedItems(w http.ResponseWriter, r *http.Request) {
+	startDate := r.URL.Query().Get("startDate")
+	endDate := r.URL.Query().Get("endDate")
+	fmt.Println(startDate, endDate)
+	h.aggreService.NumberOfOrderedItemsService(startDate, endDate)
 }

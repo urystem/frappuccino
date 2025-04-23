@@ -10,7 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func InventoryRouter(db *sqlx.DB) *http.ServeMux {
+func inventoryRouter(db *sqlx.DB) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	var dalInventInter dal.InventoryDataAccess = dal.ReturnDalInvCore(db)
