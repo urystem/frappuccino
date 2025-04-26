@@ -32,10 +32,11 @@ func (aggreRoute *aggregationRoute) AggregationReportRouter() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /total-sales", aggreRoute.aggreHandler.TotalSales)
 	mux.HandleFunc("GET /popular-items", aggreRoute.aggreHandler.PopularItems)
+	mux.HandleFunc("GET /search", aggreRoute.aggreHandler.FullTextSearchReport)
 	return mux
 }
 
-// like only at /
+// like only at
 // As Root
 func (aggreRoute *aggregationRoute) AggregationsAsRootMux() *http.ServeMux {
 	mux := http.NewServeMux()

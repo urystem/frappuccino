@@ -38,8 +38,8 @@ INSERT INTO
         price
     )
 VALUES (
-        'Espresso Beans',
-        'High-quality coffee beans',
+        'Double Chocolate Cake',
+        'Rich chocolate layer cake',
         5000.0,
         200.0,
         'g',
@@ -47,7 +47,7 @@ VALUES (
     ),
     (
         'Milk',
-        'Fresh dairy milk',
+        'Fresh dairy milk Chocolate',
         100.0,
         10.0,
         'ml',
@@ -63,7 +63,7 @@ VALUES (
     ),
     (
         'Flour',
-        'All-purpose wheat flour',
+        'All-purpose wheat flour cake',
         10000.0,
         500.0,
         'g',

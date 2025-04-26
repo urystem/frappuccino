@@ -16,6 +16,7 @@ type AggregationDalInter interface {
 	AmountSales() (float64, error)
 	Popularies() (*models.PopularItems, error)
 	CountOfOrderedItems(start, end *time.Time) (map[string]uint64, error)
+	SearchByWordInventory(ind string, minPrice, maxPrice float64, stc *models.SearchThings) error
 }
 
 func ReturnDulAggregationDB(db *sqlx.DB) AggregationDalInter {
@@ -108,3 +109,120 @@ func (db *dalAggregation) CountOfOrderedItems(start, end *time.Time) (map[string
 	}
 	return countItems, nil
 }
+
+func (db *dalAggregation) SearchByWordInventory(find string, minPrice, maxPrice float64, strc *models.SearchThings) error {
+	query := `
+	WITH ranked_inventory AS (
+    	SELECT
+        	id, name, description, quantity,
+        	reorder_level, unit, price,
+        	ROUND(ts_rank(
+            	to_tsvector(name) ||
+            	to_tsvector(description),
+            	to_tsquery($1)
+        	)::numeric, 3) AS relevance
+    	FROM inventory
+		WHERE price BETWEEN $2 AND $3
+	)
+	SELECT *
+	FROM ranked_inventory
+	WHERE relevance > 0.01
+	ORDER BY relevance DESC`
+
+	return db.database.Select(&strc.Inventories, query, find, minPrice, maxPrice)
+}
+
+/*
+ts_rank(setweight(to_tsvector('english', name), 'A'), ts_query) * 0.8 +
+ts_rank(setweight(to_tsvector('english', description), 'B'), ts_query) * 0.2
+
+*/
+
+/*
+	WITH ranked_inventory AS (
+    	SELECT
+        	id, name, description, quantity,
+        	reorder_level, unit, price,
+        	ROUND(ts_rank(
+            	setweight(to_tsvector(name), 'A') ||
+            	setweight(to_tsvector(description), 'B'),
+            	to_tsquery($1)
+        	)::numeric, 3) AS relevance
+    	FROM inventory
+		WHERE price BETWEEN $2 AND $3
+	)
+	SELECT *
+	FROM ranked_inventory
+	WHERE relevance > 0.01
+	ORDER BY relevance DESC
+*/
+
+/*
+WITH ranked_inventory AS (
+    	SELECT
+        	id, name, description, quantity,
+        	reorder_level, unit, price,
+        	ts_rank(
+    			to_tsvector('english', name || ' ' || description),
+    			websearch_to_tsquery('english', 'chocolate cake')
+  			) AS relevance
+    	FROM inventory
+	)
+	SELECT *
+	FROM ranked_inventory
+	WHERE relevance > 0
+	ORDER BY relevance DESC
+*/
+
+/*
+WITH ranked_inventory AS (
+    	SELECT
+        	id, name, description, quantity,
+        	reorder_level, unit, price,
+        	ts_rank(
+    			to_tsvector(name || ' ' || description),
+    			plainto_tsquery('Double Chocolate Cake')
+  			) AS relevance
+    	FROM inventory
+	)
+	SELECT *
+	FROM ranked_inventory
+	WHERE relevance > 0
+	ORDER BY relevance DESC
+
+
+
+*/
+
+/*
+
+WITH ranked_inventory AS (
+    	SELECT
+        	id, name, description, quantity,
+        	reorder_level, unit, price,
+        	ts_rank(
+            	setweight(to_tsvector(name), 'A') ||
+            	setweight(to_tsvector(description), 'B'),
+            	to_tsquery('chocolate | cake')
+        	) AS relevance
+    	FROM inventory
+	)
+	SELECT *
+	FROM ranked_inventory
+	WHERE relevance > 0
+	ORDER BY relevance DESC
+*/
+
+/*
+   SELECT
+       m.id AS id,
+       m.name,
+       m.description,
+       m.price,
+       ts_rank(to_tsvector(m.name || ' ' || m.description), plainto_tsquery('chocolate | cake')) AS relevance
+   FROM
+       inventory m
+   WHERE
+       to_tsvector(m.name || ' ' || m.description) @@ plainto_tsquery('chocolate | cake')
+
+*/

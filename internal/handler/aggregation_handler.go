@@ -15,6 +15,7 @@ type AggregationHandInter interface {
 	TotalSales(w http.ResponseWriter, r *http.Request)
 	PopularItems(w http.ResponseWriter, r *http.Request)
 	NumberOfOrderedItems(w http.ResponseWriter, r *http.Request)
+	FullTextSearchReport(w http.ResponseWriter, r *http.Request)
 }
 
 func ReturnAggregationHandInter(aggreSer service.AggregationServiceInter) AggregationHandInter {
@@ -68,6 +69,29 @@ func (h *aggregationHandler) NumberOfOrderedItems(w http.ResponseWriter, r *http
 	err = bodyJsonStruct(w, numberOf, http.StatusOK)
 	if err != nil {
 		slog.Error("Get number of sales", "error", err)
+	} else {
+		slog.Info("succes")
+	}
+}
+
+func (h *aggregationHandler) FullTextSearchReport(w http.ResponseWriter, r *http.Request) {
+	find := r.URL.Query().Get("q")
+	filter := r.URL.Query().Get("filter")
+	minPrice := r.URL.Query().Get("minPrice")
+	maxPrice := r.URL.Query().Get("maxPrice")
+	// fmt.Println("queryWords", queryWords)
+	// fmt.Println("filter", filter)
+	// fmt.Println("minprice", minPrice)
+	// fmt.Println("maxPrice", maxPrice)
+
+	res, err := h.aggreService.Search(find, filter, minPrice, maxPrice)
+	if err != nil {
+		slog.Error("Get search", "error", err)
+		return
+	}
+	err = bodyJsonStruct(w, res, http.StatusOK)
+	if err != nil {
+		slog.Error("Get search", "error", err)
 	} else {
 		slog.Info("succes")
 	}

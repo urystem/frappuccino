@@ -1,9 +1,14 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func main() {
-    a := "hello"
-    b := a // присваивание одной строки другой
-    fmt.Println(&a, &b) // Ожидаем одинаковые адреса
+	filter := " fdssf, fdsfd, dgfdgfdg     "
+	froms := strings.FieldsFunc(filter, func(r rune) bool { return r == ',' || r == ' ' })
+	for _, v := range froms {
+		fmt.Println(v)
+	}
 }
