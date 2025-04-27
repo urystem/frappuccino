@@ -2,13 +2,18 @@ package main
 
 import (
 	"fmt"
-	"strings"
+	"time"
 )
 
 func main() {
-	filter := " fdssf, fdsfd, dgfdgfdg     "
-	froms := strings.FieldsFunc(filter, func(r rune) bool { return r == ',' || r == ' ' })
-	for _, v := range froms {
-		fmt.Println(v)
-	}
+	// Пример времени с локальным часовым поясом
+	monthTime := time.Date(2025, time.January, 1, 0, 0, 0, 0, time.Local)
+
+	// Вызов без UTC (используется локальное время)
+	localMonth := monthTime.Month()
+	fmt.Println("Месяц в локальном времени:", localMonth)
+
+	// Вызов с UTC (переводим в UTC)
+	utcMonth := monthTime.UTC().Month()
+	fmt.Println("Месяц в UTC:", utcMonth)
 }

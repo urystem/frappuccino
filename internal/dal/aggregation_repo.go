@@ -1,6 +1,7 @@
 package dal
 
 import (
+	"database/sql"
 	"time"
 
 	"frappuccino/models"
@@ -18,6 +19,9 @@ type AggregationDalInter interface {
 	CountOfOrderedItems(start, end *time.Time) (map[string]uint64, error)
 	SearchByWordInventory(ind string, minPrice, maxPrice float64, stc *models.SearchThings) error
 	SearchByWordMenu(find string, minPrice, maxPrice float64, strc *models.SearchThings) error
+	SearchByWordOrder(find string, minPrice, maxPrice float64, strc *models.SearchThings) error
+	PeriodMonth(month time.Month) ([]map[string]uint64, error)
+	PeriodYear(int) ([]map[string]uint64, error)
 }
 
 func ReturnDulAggregationDB(db *sqlx.DB) AggregationDalInter {
@@ -145,27 +149,88 @@ func (db *dalAggregation) SearchByWordMenu(find string, minPrice, maxPrice float
 	FROM ranked_menu 
 	WHERE relevance > 0.009
 	ORDER BY relevance DESC`
-	tx, err := db.database.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	err = tx.Select(&strc.Menus, query, find, minPrice, maxPrice)
-	if err != nil {
-		return err
-	}
+	return db.database.Select(&strc.Menus, query, find, minPrice, maxPrice)
+}
 
-	// stmt, err := tx.PrepareNamed(`SELECT inventory_id, quantity FROM menu_item_ingredients WHERE product_id=:id`)
-	// if err != nil {
-	// 	return err
-	// }
-	// defer stmt.Close()
+func (db *dalAggregation) SearchByWordOrder(find string, minPrice, maxPrice float64, strc *models.SearchThings) error {
+	query := `
+	WITH ranked_order AS(
+		SELECT 
+			o.id,
+			o.customer_name,
+			o.status,
+			o.allergens,
+			o.total,
+			array_agg(m.name) AS menu_items,
+			ROUND(
+				ts_rank(
+					setweight(to_tsvector(o.customer_name),'A') ||
+					setweight(to_tsvector(array_to_string(o.allergens, ' ')), 'C') ||
+					setweight(to_tsvector(string_agg(m.name, ' ')), 'B'),
+					to_tsquery($1)
+				)::numeric, 2) AS relevance
+		FROM orders AS o
+		JOIN order_items AS oi ON o.id = oi.order_id
+		JOIN menu_items AS m ON oi.product_id = m.id
+		WHERE o.total BETWEEN $2 AND $3
+		GROUP BY o.id
+	)
+	SELECT * 
+	FROM ranked_order
+	WHERE relevance > 0.009
+	ORDER BY relevance DESC`
 
-	// for i, menu := range strc.Menus {
-	// 	err = stmt.Select(&strc.Menus[i].Ingredients, menu)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-	return tx.Commit()
+	return db.database.Select(&strc.Orders, query, find, minPrice, maxPrice)
+}
+
+func (db *dalAggregation) PeriodMonth(month time.Month) ([]map[string]uint64, error) {
+	query := `
+		SELECT
+			EXTRACT(DAY FROM created_at) AS day,
+	        COUNT(*) AS total_orders
+		FROM
+			orders
+		WHERE
+			EXTRACT(MONTH FROM created_at) = $1
+		GROUP BY day
+		ORDER BY day`
+	rows, err := db.database.Query(query, month)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return db.rowsToMap(rows)
+}
+
+func (db *dalAggregation) PeriodYear(year int) ([]map[string]uint64, error) {
+	query := `
+	SELECT 
+		TO_CHAR(created_at, 'FMMonth') AS month,
+		COUNT(*) AS total_orders
+	FROM orders
+	WHERE 
+		EXTRACT(YEAR FROM created_at) = $1
+		AND status = 'accepted'
+	GROUP BY month, EXTRACT(MONTH FROM created_at)
+	ORDER BY EXTRACT(MONTH FROM created_at)`
+	rows, err := db.database.Query(query, year)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return db.rowsToMap(rows)
+}
+
+func (db *dalAggregation) rowsToMap(rows *sql.Rows) ([]map[string]uint64, error) {
+	var result []map[string]uint64
+	for rows.Next() {
+		var day string
+		var totalOrders uint64
+		err := rows.Scan(&day, &totalOrders)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, map[string]uint64{day: totalOrders})
+	}
+	return result, nil
 }

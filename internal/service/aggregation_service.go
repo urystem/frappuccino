@@ -21,6 +21,7 @@ type AggregationServiceInter interface {
 	PopularItems() (*models.PopularItems, error)
 	NumberOfOrderedItemsService(start, end string) (map[string]uint64, error)
 	Search(find, from, minPrice, maxPrice string) (*models.SearchThings, error)
+	OrderedItemsPeriod(period, month, year string) (*models.OrderStats, error)
 }
 
 func ReturnAggregationService(aggDalInter dal.AggregationDalInter) AggregationServiceInter {
@@ -90,21 +91,75 @@ func (ser *aggregationService) Search(find, filter, minPrice, maxPrice string) (
 	var ansSearch models.SearchThings
 	for k, v := range filtersMap {
 		if v {
+			var count uint64
 			switch k {
 			case "inventory":
 				err = ser.aggreDalInter.SearchByWordInventory(find, minPriceF, maxPriceF, &ansSearch)
+				ansSearch.Inventory_math = new(uint64)
+				count = uint64(len(ansSearch.Inventories))
+				*ansSearch.Inventory_math = count
 			case "menu":
 				err = ser.aggreDalInter.SearchByWordMenu(find, minPriceF, maxPriceF, &ansSearch)
+				ansSearch.Menu_math = new(uint64)
+				count = uint64(len(ansSearch.Menus))
+				*ansSearch.Menu_math = count
 			case "orders":
-
+				err = ser.aggreDalInter.SearchByWordOrder(find, minPriceF, maxPriceF, &ansSearch)
+				ansSearch.Order_math = new(uint64)
+				count = uint64(len(ansSearch.Orders))
+				*ansSearch.Order_math = count
 			}
 			if err != nil {
 				return nil, err
+			} else {
+				ansSearch.Total_math += count
 			}
 		}
 	}
-	ansSearch.Total_math = uint64(len(ansSearch.Inventories)) + uint64(len(ansSearch.Menus))
 	return &ansSearch, nil
+}
+
+func (ser *aggregationService) OrderedItemsPeriod(period, month, year string) (*models.OrderStats, error) {
+	var orderStats models.OrderStats
+	var err error
+	switch strings.ToLower(period) {
+	case "day":
+		mouthInt := time.Now().Month()
+
+		if len(month) != 0 {
+			monthTime, err := time.Parse("January", month)
+			if err != nil {
+				return nil, err
+			}
+			// mouthInt = monthTime.UTC().Month()
+			mouthInt = monthTime.Month()
+		}
+		orderStats.OrderItems, err = ser.aggreDalInter.PeriodMonth(mouthInt)
+		if err != nil {
+			return nil, err
+		}
+		orderStats.Month = mouthInt.String()
+	case "month":
+		yearInt := time.Now().Year()
+		if len(year) != 0 {
+			yearAtoi, err := strconv.Atoi(year)
+			if err != nil {
+				return nil, err
+			} else if yearAtoi < 2000 || yearInt < yearAtoi {
+				return nil, errors.New("dd")
+			}
+			yearInt = yearAtoi
+		}
+		orderStats.OrderItems, err = ser.aggreDalInter.PeriodYear(yearInt)
+		if err != nil {
+			return nil, err
+		}
+		orderStats.Year = yearInt
+	default:
+		return nil, errors.New("dsf")
+	}
+	orderStats.Period = period
+	return &orderStats, nil
 }
 
 func (ser *aggregationService) timeParser(date string) (*time.Time, error) {

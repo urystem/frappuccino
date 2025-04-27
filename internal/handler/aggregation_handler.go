@@ -16,6 +16,7 @@ type AggregationHandInter interface {
 	PopularItems(w http.ResponseWriter, r *http.Request)
 	NumberOfOrderedItems(w http.ResponseWriter, r *http.Request)
 	FullTextSearchReport(w http.ResponseWriter, r *http.Request)
+	PeriodOrderedItems(w http.ResponseWriter, r *http.Request)
 }
 
 func ReturnAggregationHandInter(aggreSer service.AggregationServiceInter) AggregationHandInter {
@@ -79,11 +80,6 @@ func (h *aggregationHandler) FullTextSearchReport(w http.ResponseWriter, r *http
 	filter := r.URL.Query().Get("filter")
 	minPrice := r.URL.Query().Get("minPrice")
 	maxPrice := r.URL.Query().Get("maxPrice")
-	// fmt.Println("queryWords", queryWords)
-	// fmt.Println("filter", filter)
-	// fmt.Println("minprice", minPrice)
-	// fmt.Println("maxPrice", maxPrice)
-
 	res, err := h.aggreService.Search(find, filter, minPrice, maxPrice)
 	if err != nil {
 		slog.Error("Get search", "error", err)
@@ -95,4 +91,25 @@ func (h *aggregationHandler) FullTextSearchReport(w http.ResponseWriter, r *http
 	} else {
 		slog.Info("succes")
 	}
+}
+
+func (h *aggregationHandler) PeriodOrderedItems(w http.ResponseWriter, r *http.Request) {
+	dayOrMonth := r.URL.Query().Get("period")
+	month := r.URL.Query().Get("month")
+	year := r.URL.Query().Get("year")
+	if dayOrMonth == "" {
+		writeHttp(w, http.StatusBadRequest, "", "period parameter is required")
+		return
+	}
+	orderStats, err := h.aggreService.OrderedItemsPeriod(dayOrMonth, month, year)
+	if err != nil {
+		slog.Error(err.Error())
+		return
+	}
+	err = bodyJsonStruct(w, orderStats, http.StatusOK)
+	if err != nil {
+		slog.Error(err.Error())
+		return
+	}
+	slog.Info("succes")
 }

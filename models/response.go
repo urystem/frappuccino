@@ -14,20 +14,33 @@ type PopularItems struct {
 	} `json:"popular_items"`
 }
 
-// type CountOfOrderedItem map[string]uint64
-
 type SearchThings struct {
 	Inventories []struct {
 		Inventory
 		Relevance float64 `json:"relevance" db:"relevance"`
 	} `json:"inventory_items,omitempty"`
 
-	Menus []struct {
+	Inventory_math *uint64 `json:"inventory_matches,omitempty"`
+	Menus          []struct {
 		MenuItem
 		InventoryItems pq.StringArray `json:"inventories" db:"inventories"`
 		Relevance      float64        `json:"relevance" db:"relevance"`
 	} `json:"menu_items,omitempty"`
 
-	// Orders     []OrderSearch `json:"orders"`
-	Total_math uint64 `json:"total_matches"`
+	Menu_math *uint64 `json:"menu_matches,omitempty"`
+	Orders    []struct {
+		Order
+		MenuItems pq.StringArray `json:"menu_items" db:"menu_items"`
+		Relevance float64        `json:"relevance" db:"relevance"`
+	} `json:"orders,omitempty"`
+
+	Order_math *uint64 `json:"order_matches,omitempty"`
+	Total_math uint64  `json:"total_matches"`
+}
+
+type OrderStats struct {
+	Period     string              `json:"period"`
+	Month      string              `json:"month,omitempty"`
+	Year       int              `json:"year,omitempty"`
+	OrderItems []map[string]uint64 `json:"ordered_items"`
 }
