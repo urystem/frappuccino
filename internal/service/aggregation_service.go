@@ -56,7 +56,6 @@ func (ser *aggregationService) Search(find, filter, minPrice, maxPrice string) (
 	}
 	var minPriceF, maxPriceF float64
 	var err error
-	filtersMap := map[string]bool{"inventory": false, "menu": false, "orders": false}
 	if len(minPrice) != 0 {
 		minPriceF, err = strconv.ParseFloat(minPrice, 64)
 		if err != nil {
@@ -70,6 +69,8 @@ func (ser *aggregationService) Search(find, filter, minPrice, maxPrice string) (
 	} else {
 		maxPriceF = math.MaxFloat64
 	}
+
+	filtersMap := map[string]bool{"inventory": false, "menu": false, "orders": false}
 	if len(filter) == 0 || filter == "all" {
 		for k := range filtersMap {
 			filtersMap[k] = true
@@ -88,10 +89,21 @@ func (ser *aggregationService) Search(find, filter, minPrice, maxPrice string) (
 	}
 	var ansSearch models.SearchThings
 	for k, v := range filtersMap {
-		if k == "inventory" && v {
-			ser.aggreDalInter.SearchByWordInventory(find, minPriceF, maxPriceF, &ansSearch)
+		if v {
+			switch k {
+			case "inventory":
+				err = ser.aggreDalInter.SearchByWordInventory(find, minPriceF, maxPriceF, &ansSearch)
+			case "menu":
+				err = ser.aggreDalInter.SearchByWordMenu(find, minPriceF, maxPriceF, &ansSearch)
+			case "orders":
+
+			}
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
+	ansSearch.Total_math = uint64(len(ansSearch.Inventories)) + uint64(len(ansSearch.Menus))
 	return &ansSearch, nil
 }
 

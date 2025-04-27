@@ -45,12 +45,12 @@ func (core *dalMenu) SelectAllMenus() ([]models.MenuItem, error) {
 	}
 	defer stmt.Close()
 
-	for i := range menus {
+	for i, menu := range menus {
 		// menus[i] деп структураның өзін бере салдым, (ө)үйткені ол тек 1 ғана аргумент қабылдайды екен
 		// menus[i].ID деп query ға $1 қоя салуға келмеді
-		err = stmt.Select(&menus[i].Ingredients, menus[i])
+		err = stmt.Select(&menus[i].Ingredients, menu)
 		if err != nil {
-			return nil, nil
+			return nil, err
 		}
 	}
 	return menus, tx.Commit()

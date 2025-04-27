@@ -17,6 +17,7 @@ type AggregationDalInter interface {
 	Popularies() (*models.PopularItems, error)
 	CountOfOrderedItems(start, end *time.Time) (map[string]uint64, error)
 	SearchByWordInventory(ind string, minPrice, maxPrice float64, stc *models.SearchThings) error
+	SearchByWordMenu(find string, minPrice, maxPrice float64, strc *models.SearchThings) error
 }
 
 func ReturnDulAggregationDB(db *sqlx.DB) AggregationDalInter {
@@ -58,24 +59,6 @@ func (db *dalAggregation) Popularies() (*models.PopularItems, error) {
 }
 
 func (db *dalAggregation) CountOfOrderedItems(start, end *time.Time) (map[string]uint64, error) {
-	// countItemsQ := `
-	// 	SELECT m.name, SUM(oi.quantity) AS sum
-	// 		FROM order_items AS oi
-	// 		JOIN menu_items AS m ON m.id = oi.product_id
-	// 		JOIN orders AS o ON o.id = oi.order_id
-	// 		WHERE o.status = 'accepted' AND o.created_at BETWEEN $1 and $2
-	// 		GROUP BY m.name
-	// 		ORDER BY sum DESC`
-
-	// countItemsQ := `
-	// 		SELECT m.name, SUM(oi.quantity) AS sum
-	// 			FROM order_items AS oi
-	// 			JOIN menu_items AS m ON m.id = oi.product_id
-	// 			JOIN orders AS o ON o.id = oi.order_id
-	// 			WHERE o.status = 'accepted' AND o.created_at BETWEEN '10-11-2023' and '11-11-2025'
-	// 			GROUP BY m.name
-	// 			ORDER BY sum DESC`
-
 	countItemsQ2 := `
 		SELECT m.name, SUM(oi.quantity) AS sum
 			FROM order_items AS oi
@@ -117,112 +100,72 @@ func (db *dalAggregation) SearchByWordInventory(find string, minPrice, maxPrice 
         	id, name, description, quantity,
         	reorder_level, unit, price,
         	ROUND(ts_rank(
-            	to_tsvector(name) ||
-            	to_tsvector(description),
+            	setweight(to_tsvector(name),'A') ||
+            	setweight(to_tsvector(description), 'B'),
             	to_tsquery($1)
-        	)::numeric, 3) AS relevance
+        	)::numeric, 2) AS relevance
     	FROM inventory
 		WHERE price BETWEEN $2 AND $3
 	)
 	SELECT *
 	FROM ranked_inventory
-	WHERE relevance > 0.01
+	WHERE relevance > 0.009
 	ORDER BY relevance DESC`
 
 	return db.database.Select(&strc.Inventories, query, find, minPrice, maxPrice)
 }
 
-/*
-ts_rank(setweight(to_tsvector('english', name), 'A'), ts_query) * 0.8 +
-ts_rank(setweight(to_tsvector('english', description), 'B'), ts_query) * 0.2
-
-*/
-
-/*
-	WITH ranked_inventory AS (
-    	SELECT
-        	id, name, description, quantity,
-        	reorder_level, unit, price,
-        	ROUND(ts_rank(
-            	setweight(to_tsvector(name), 'A') ||
-            	setweight(to_tsvector(description), 'B'),
-            	to_tsquery($1)
-        	)::numeric, 3) AS relevance
-    	FROM inventory
-		WHERE price BETWEEN $2 AND $3
+func (db *dalAggregation) SearchByWordMenu(find string, minPrice, maxPrice float64, strc *models.SearchThings) error {
+	query := `
+	WITH ranked_menu AS(
+		SELECT
+			m.id,
+			m.name,
+			m.description,
+			m.tags,
+			m.allergens,
+			m.price,
+			array_agg(i.name) AS inventories,
+			ROUND(
+				ts_rank(
+					setweight(to_tsvector(m.name),'A') ||
+					setweight(to_tsvector(m.description),'B') ||
+					setweight(to_tsvector(array_to_string(m.tags, ' ')), 'C') ||
+					setweight(to_tsvector(array_to_string(m.allergens, ' ')), 'D') ||
+					setweight(to_tsvector(string_agg(i.name, ' ')), 'B'),
+					to_tsquery($1)
+				)::numeric, 2) AS relevance
+		FROM menu_items AS m
+		JOIN menu_item_ingredients AS mi ON m.id=mi.product_id
+		JOIN inventory AS i ON mi.inventory_id = i.id
+		WHERE m.price BETWEEN $2 AND $3
+		GROUP BY m.id
 	)
-	SELECT *
-	FROM ranked_inventory
-	WHERE relevance > 0.01
-	ORDER BY relevance DESC
-*/
+	SELECT * 
+	FROM ranked_menu 
+	WHERE relevance > 0.009
+	ORDER BY relevance DESC`
+	tx, err := db.database.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	err = tx.Select(&strc.Menus, query, find, minPrice, maxPrice)
+	if err != nil {
+		return err
+	}
 
-/*
-WITH ranked_inventory AS (
-    	SELECT
-        	id, name, description, quantity,
-        	reorder_level, unit, price,
-        	ts_rank(
-    			to_tsvector('english', name || ' ' || description),
-    			websearch_to_tsquery('english', 'chocolate cake')
-  			) AS relevance
-    	FROM inventory
-	)
-	SELECT *
-	FROM ranked_inventory
-	WHERE relevance > 0
-	ORDER BY relevance DESC
-*/
+	// stmt, err := tx.PrepareNamed(`SELECT inventory_id, quantity FROM menu_item_ingredients WHERE product_id=:id`)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer stmt.Close()
 
-/*
-WITH ranked_inventory AS (
-    	SELECT
-        	id, name, description, quantity,
-        	reorder_level, unit, price,
-        	ts_rank(
-    			to_tsvector(name || ' ' || description),
-    			plainto_tsquery('Double Chocolate Cake')
-  			) AS relevance
-    	FROM inventory
-	)
-	SELECT *
-	FROM ranked_inventory
-	WHERE relevance > 0
-	ORDER BY relevance DESC
-
-
-
-*/
-
-/*
-
-WITH ranked_inventory AS (
-    	SELECT
-        	id, name, description, quantity,
-        	reorder_level, unit, price,
-        	ts_rank(
-            	setweight(to_tsvector(name), 'A') ||
-            	setweight(to_tsvector(description), 'B'),
-            	to_tsquery('chocolate | cake')
-        	) AS relevance
-    	FROM inventory
-	)
-	SELECT *
-	FROM ranked_inventory
-	WHERE relevance > 0
-	ORDER BY relevance DESC
-*/
-
-/*
-   SELECT
-       m.id AS id,
-       m.name,
-       m.description,
-       m.price,
-       ts_rank(to_tsvector(m.name || ' ' || m.description), plainto_tsquery('chocolate | cake')) AS relevance
-   FROM
-       inventory m
-   WHERE
-       to_tsvector(m.name || ' ' || m.description) @@ plainto_tsquery('chocolate | cake')
-
-*/
+	// for i, menu := range strc.Menus {
+	// 	err = stmt.Select(&strc.Menus[i].Ingredients, menu)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+	return tx.Commit()
+}

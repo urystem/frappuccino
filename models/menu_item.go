@@ -9,7 +9,7 @@ type MenuItem struct {
 	Tags        pq.StringArray    `json:"tags" db:"tags"`           /*pgtype.Array[string]*/
 	Allergens   pq.StringArray    `json:"allergens" db:"allergens"` /*pgtype.Array[string]*/
 	Price       float64           `json:"price" db:"price"`
-	Ingredients []MenuIngredients `json:"ingredients"`
+	Ingredients []MenuIngredients `json:"ingredients,omitempty"`
 }
 
 type MenuIngredients struct {

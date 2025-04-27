@@ -72,3 +72,60 @@ ts_rank()
 
 
 ts_rank возвращает тип real (float4).
+
+
+
+
+
+
+
+
+
+
+
+Что можно сделать лучше?
+
+Если хочешь использовать индексы для скорости и рассчитывать ts_rank быстро, тогда есть такой приём:
+
+✅ Создавать отдельное поле типа tsvector в таблице, например:
+
+ALTER TABLE inventory ADD COLUMN search_vector tsvector;
+
+Потом обновить его:
+
+UPDATE inventory SET search_vector = 
+    setweight(to_tsvector('english', name), 'A') || 
+    setweight(to_tsvector('english', description), 'B');
+
+Создать индекс:
+
+CREATE INDEX idx_inventory_search_vector ON inventory USING GIN (search_vector);
+
+И теперь твой запрос будет красивый и быстрый:
+
+SELECT id, name, description, ...
+FROM inventory
+WHERE search_vector @@ to_tsquery($1)
+ORDER BY ts_rank(search_vector, to_tsquery($1)) DESC;
+
+Тут уже будет:
+
+    и фильтрация через индекс
+
+    и ts_rank по готовому tsvector
+
+
+
+/*
+	   SELECT
+	       m.id AS id,
+	       m.name,
+	       m.description,
+	       m.price,
+	       ts_rank(to_tsvector(m.name || ' ' || m.description), plainto_tsquery('chocolate | cake')) AS relevance
+	   FROM
+	       inventory m
+	   WHERE
+	       to_tsvector(m.name || ' ' || m.description) @@ plainto_tsquery('chocolate | cake')
+
+*/
