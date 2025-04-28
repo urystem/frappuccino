@@ -28,19 +28,20 @@ func NewAggregationRouter(db *sqlx.DB) AggregationRouters {
 }
 
 // report
-func (aggreRoute *aggregationRoute) AggregationReportRouter() *http.ServeMux {
+func (agg *aggregationRoute) AggregationReportRouter() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /total-sales", aggreRoute.aggreHandler.TotalSales)
-	mux.HandleFunc("GET /popular-items", aggreRoute.aggreHandler.PopularItems)
-	mux.HandleFunc("GET /search", aggreRoute.aggreHandler.FullTextSearchReport)
-	mux.HandleFunc("GET /orderedItemsByPeriod", aggreRoute.aggreHandler.PeriodOrderedItems)
+	mux.HandleFunc("GET /total-sales", agg.aggreHandler.TotalSales)
+	mux.HandleFunc("GET /popular-items", agg.aggreHandler.PopularItems)
+	mux.HandleFunc("GET /search", agg.aggreHandler.FullTextSearchReport)
+	mux.HandleFunc("GET /orderedItemsByPeriod", agg.aggreHandler.PeriodOrderedItems)
+	mux.HandleFunc("GET /getLeftOvers", agg.aggreHandler.GetLeftOvers)
 	return mux
 }
 
 // like only at
 // As Root
-func (aggreRoute *aggregationRoute) AggregationsAsRootMux() *http.ServeMux {
+func (agg *aggregationRoute) AggregationsAsRootMux() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /numberOfOrderedItems", aggreRoute.aggreHandler.NumberOfOrderedItems)
+	mux.HandleFunc("GET /numberOfOrderedItems", agg.aggreHandler.NumberOfOrderedItems)
 	return mux
 }

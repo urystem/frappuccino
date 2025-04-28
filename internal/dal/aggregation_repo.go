@@ -2,6 +2,7 @@ package dal
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"frappuccino/models"
@@ -22,6 +23,7 @@ type AggregationDalInter interface {
 	SearchByWordOrder(find string, minPrice, maxPrice float64, strc *models.SearchThings) error
 	PeriodMonth(month time.Month) ([]map[string]uint64, error)
 	PeriodYear(int) ([]map[string]uint64, error)
+	GetLeftOversRepo(*models.GetLeftOvers) error
 }
 
 func ReturnDulAggregationDB(db *sqlx.DB) AggregationDalInter {
@@ -33,18 +35,8 @@ func (db *dalAggregation) AmountSales() (float64, error) {
 	SELECT SUM(total)
 	FROM orders
 	WHERE status = 'accepted'`
-
 	var total float64
-	tx, err := db.database.Beginx()
-	if err != nil {
-		return 0, err
-	}
-	defer tx.Rollback()
-	err = tx.Get(&total, sumTotal)
-	if err != nil {
-		return 0, err
-	}
-	return total, tx.Commit()
+	return total, db.database.Get(&total, sumTotal)
 }
 
 func (db *dalAggregation) Popularies() (*models.PopularItems, error) {
@@ -58,8 +50,8 @@ func (db *dalAggregation) Popularies() (*models.PopularItems, error) {
 			ORDER BY sum DESC`
 
 	var popularies models.PopularItems
-	err := db.database.Select(&popularies.Items, popularsQ)
-	return &popularies, err
+
+	return &popularies, db.database.Select(&popularies.Items, popularsQ)
 }
 
 func (db *dalAggregation) CountOfOrderedItems(start, end *time.Time) (map[string]uint64, error) {
@@ -233,4 +225,37 @@ func (db *dalAggregation) rowsToMap(rows *sql.Rows) ([]map[string]uint64, error)
 		result = append(result, map[string]uint64{day: totalOrders})
 	}
 	return result, nil
+}
+
+func (db *dalAggregation) GetLeftOversRepo(over *models.GetLeftOvers) error {
+	tx, err := db.database.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var countRows uint64
+	err = tx.Get(&countRows, `SELECT COUNT(*) FROM inventory`)
+	if err != nil {
+		return err
+	}
+	fmt.Println(countRows)
+	query := `
+		SELECT 
+			id, name, quantity, price
+		FROM inventory
+		ORDER BY  
+			CASE 
+				WHEN LOWER($1) = 'quantity' THEN quantity
+				WHEN LOWER($1) = 'price' THEN price
+			 	ELSE id
+			END 
+			ASC
+		LIMIT $2 OFFSET $3`
+	offset := (over.CurrentPage - 1) * over.PageSize
+	err = tx.Select(&over.Data, query, over.SortBy, over.PageSize, offset)
+	if err != nil {
+		return err
+	}
+	over.TotalPages = countRows / over.PageSize
+	return tx.Commit()
 }

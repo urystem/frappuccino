@@ -188,10 +188,11 @@ func (db *dalOrder) inventoryUpdaterByOrderAndSetTotal(tx *sqlx.Tx, id uint64, i
 	}
 	defer stmt.Close()
 
-	notEnoughInventsQ := `SELECT id, ABS(garbage) AS not_enough
+	notEnoughInventsQ := `SELECT id, name, ABS(garbage) AS not_enough
 		FROM (
   			SELECT 
 				inv.id,
+				inv.name,
 				inv.quantity - ings.quantity * $2 AS garbage
   			FROM 
 				inventory inv
@@ -221,15 +222,13 @@ func (db *dalOrder) inventoryUpdaterByOrderAndSetTotal(tx *sqlx.Tx, id uint64, i
 		if err = stmt.QueryRow(item.ProductID).Scan(&isHasInMenu); err != nil {
 			return err
 		} else if (*items)[i].NotEnoungIngs = nil; !isHasInMenu {
-			(*items)[i].Err = new(string)
-			*(*items)[i].Err = "not found in menu"
+			(*items)[i].Warning = "not found in menu"
 			wasError = true
 
 		} else if err = stmt2.Select(&(*items)[i].NotEnoungIngs, item.ProductID, item.Quantity); err != nil {
 			return err
 		} else if len((*items)[i].NotEnoungIngs) != 0 {
-			(*items)[i].Err = new(string)
-			*(*items)[i].Err = "not enough in inventory"
+			(*items)[i].Warning = "not enough in inventory"
 			wasError = true
 		} else if !wasError { // insert to order_items
 			item.OrderId = id
@@ -242,11 +241,11 @@ func (db *dalOrder) inventoryUpdaterByOrderAndSetTotal(tx *sqlx.Tx, id uint64, i
 
 	if wasError {
 		// *items = slices.DeleteFunc(*items, func(item models.OrderItem) bool {
-		// 	return item.Err == nil
+		// 	return len(item.Err) != 0
 		// })
 		var invalidItemsCount uint64
 		for _, item := range *items {
-			if item.Err != nil {
+			if len(item.Warning) != 0 {
 				(*items)[invalidItemsCount] = item
 				invalidItemsCount++
 			}
@@ -317,6 +316,7 @@ func (db *dalOrder) CloseOrder(id uint64) error {
 	}
 	return tx.Commit()
 }
+
 // SELECT inv.id, inv.quantity-(ings.quantity * $1) AS notEnough FROM inventory AS inv JOIN menu_item_ingredients AS ings ON inv.id=ings.inventory_id WHERE ings.product_id = $2 AND inv.quantity-(ings.quantity * $1)<0;
 
 // SELECT inv.id, inv.quantity-(ings.quantity * $1) AS notEnough FROM inventory AS inv JOIN menu_item_ingredients AS ings ON inv.id=ings.inventory_id WHERE ings.product_id = $2 AND inv.quantity-(ings.quantity * $1)<0;

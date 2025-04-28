@@ -13,7 +13,7 @@ type MenuItem struct {
 }
 
 type MenuIngredients struct {
-	Status      *string `json:"status,omitempty"` // егер нил болса мүлдем жасырып тастайды
+	Status      string  `json:"status,omitempty"` // егер нил болса мүлдем жасырып тастайды
 	ProductID   uint64  `json:"-" db:"product_id"`
 	InventoryID uint64  `json:"inventory_id" db:"inventory_id"`
 	Quantity    float64 `json:"quantity" db:"quantity"`

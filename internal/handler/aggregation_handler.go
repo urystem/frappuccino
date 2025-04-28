@@ -17,6 +17,7 @@ type AggregationHandInter interface {
 	NumberOfOrderedItems(w http.ResponseWriter, r *http.Request)
 	FullTextSearchReport(w http.ResponseWriter, r *http.Request)
 	PeriodOrderedItems(w http.ResponseWriter, r *http.Request)
+	GetLeftOvers(w http.ResponseWriter, r *http.Request)
 }
 
 func ReturnAggregationHandInter(aggreSer service.AggregationServiceInter) AggregationHandInter {
@@ -112,4 +113,23 @@ func (h *aggregationHandler) PeriodOrderedItems(w http.ResponseWriter, r *http.R
 		return
 	}
 	slog.Info("succes")
+}
+
+func (h *aggregationHandler) GetLeftOvers(w http.ResponseWriter, r *http.Request) {
+	sortBy := r.URL.Query().Get("sortBy")
+	page := r.URL.Query().Get("page")
+	pageSize := r.URL.Query().Get("pageSize")
+	overs, err := h.aggreService.GetLeftOversService(sortBy, page, pageSize)
+	if err != nil {
+		slog.Error("overs", err)
+		writeHttp(w, http.StatusBadRequest, "error", err.Error())
+		return
+	}
+	err = bodyJsonStruct(w, overs, http.StatusOK)
+	if err != nil {
+		slog.Error("overs", err)
+		writeHttp(w, http.StatusBadRequest, "error", err.Error())
+		return
+	}
+	slog.Info("overs", "OK")
 }

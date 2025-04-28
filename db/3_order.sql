@@ -5,7 +5,7 @@ CREATE TABLE orders (
     customer_name VARCHAR(64) NOT NULL,
     status order_status NOT NULL DEFAULT 'processing',
     allergens VARCHAR(64) [],
-    total DECIMAL(10, 2) NOT NULL CHECK (total >= 0),
+    total DECIMAL(10, 2) NOT NULL DEFAULT 0 CHECK (total >= 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP --NOW()
 );

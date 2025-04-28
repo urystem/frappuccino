@@ -41,6 +41,20 @@ type SearchThings struct {
 type OrderStats struct {
 	Period     string              `json:"period"`
 	Month      string              `json:"month,omitempty"`
-	Year       int              `json:"year,omitempty"`
+	Year       int                 `json:"year,omitempty"`
 	OrderItems []map[string]uint64 `json:"ordered_items"`
+}
+
+type GetLeftOvers struct {
+	SortBy      string `json:"sortedBy"`
+	CurrentPage uint64 `json:"currentPage"`
+	HasNextPage bool   `json:"hasNextPage"`
+	PageSize    uint64 `json:"pageSize"`
+	TotalPages  uint64 `json:"totalPages"`
+	Data        []struct {
+		ID       uint64  `json:"id"  db:"id"`
+		Name     string  `json:"name" db:"name"`
+		Quantity float64 `json:"quantity" db:"quantity"`
+		Price    float64 `json:"price" db:"price"`
+	} `json:"data"`
 }

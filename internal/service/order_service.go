@@ -18,7 +18,6 @@ type OrdServiceInter interface {
 	CreateOrder(*models.Order) error
 	UpgradeOrder(id uint64, ord *models.Order) error
 	ShutOrder(uint64) error
-	
 }
 
 func ReturnOrdSerStruct(ord dal.OrderDalInter) OrdServiceInter {
@@ -64,12 +63,10 @@ func (ser *ordServiceToDal) checkOrderStruct(ord *models.Order) error {
 	}
 	forTestUniqItems := map[uint64]int{}
 	for i, item := range ord.Items {
-		ord.Items[i].Err = nil
+		ord.Items[i].Warning = ""
 		if ind, x := forTestUniqItems[item.ProductID]; x {
-			ord.Items[ind].Err = new(string)
-			*ord.Items[ind].Err = "duplicated"
-			ord.Items[i].Err = new(string)
-			*ord.Items[i].Err = "duplicated"
+			ord.Items[ind].Warning = "duplicated"
+			ord.Items[i].Warning = "duplicated"
 		}
 		forTestUniqItems[item.ProductID] = i
 	}

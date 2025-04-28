@@ -12,6 +12,7 @@ func Allrouter(db *sqlx.DB) *http.ServeMux {
 	muxRoot := http.NewServeMux()
 
 	inventoryRouter := inventoryRouter(db)
+
 	addPrefixToRouter("/inventory", muxRoot, inventoryRouter)
 
 	menuMux := menuRouter(db)
@@ -27,7 +28,7 @@ func Allrouter(db *sqlx.DB) *http.ServeMux {
 
 	asRoot := aggregations.AggregationsAsRootMux()
 	addPrefixToRouter("", muxRoot, asRoot)
-
+	
 	return muxRoot
 }
 

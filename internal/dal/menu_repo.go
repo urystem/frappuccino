@@ -89,7 +89,7 @@ func (core *dalMenu) DeleteMenu(id uint64) (*models.MenuDepend, error) {
 	SELECT id, customer_name 
 		FROM order_items 
 		JOIN orders ON order_id=id 
-		WHERE status <> 'processing' AND product_id=$1`
+		WHERE status = 'processing' AND product_id=$1`
 
 	var menuDepend models.MenuDepend
 	err = tx.Select(&menuDepend.Orders, query, id)
@@ -210,8 +210,7 @@ func (core *dalMenu) checkIngs(tx *sqlx.Tx, ings *[]models.MenuIngredients) erro
 		err = stmt.QueryRow(v.InventoryID).Scan(&exists)
 
 		if err == sql.ErrNoRows {
-			v.Status = new(string)
-			*v.Status = "not found"
+			v.Status = "not found"
 			(*ings)[notFoundCount] = v
 			notFoundCount++
 		} else if err != nil {

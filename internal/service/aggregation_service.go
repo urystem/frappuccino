@@ -22,6 +22,7 @@ type AggregationServiceInter interface {
 	NumberOfOrderedItemsService(start, end string) (map[string]uint64, error)
 	Search(find, from, minPrice, maxPrice string) (*models.SearchThings, error)
 	OrderedItemsPeriod(period, month, year string) (*models.OrderStats, error)
+	GetLeftOversService(sort, page, pageSize string) (*models.GetLeftOvers, error)
 }
 
 func ReturnAggregationService(aggDalInter dal.AggregationDalInter) AggregationServiceInter {
@@ -168,4 +169,34 @@ func (ser *aggregationService) timeParser(date string) (*time.Time, error) {
 	}
 	time, err := time.Parse("02.01.2006", date)
 	return &time, err
+}
+
+func (ser *aggregationService) GetLeftOversService(sort, page, pageSize string) (*models.GetLeftOvers, error) {
+	var overs models.GetLeftOvers
+	var err error
+
+	if len(page) == 0 {
+		overs.CurrentPage = 1
+	} else if overs.CurrentPage, err = strconv.ParseUint(page, 10, 0); err != nil {
+		return nil, err
+	} else if overs.CurrentPage == 0 {
+		return nil, errors.New("")
+	}
+
+	if len(pageSize) == 0 {
+		overs.PageSize = 10
+	} else if overs.PageSize, err = strconv.ParseUint(pageSize, 10, 0); err != nil {
+		return nil, err
+	} else if overs.PageSize == 0 {
+		return nil, errors.New("")
+	}
+	// sort = strings.ToLower(sort)
+	// if len(sort) != 0 && sort != "price" && sort != "quantity" {
+	// 	return nil, errors.New("unknown sort")
+	// }
+	err = ser.aggreDalInter.GetLeftOversRepo(&overs)
+	if err != nil {
+		return nil, err
+	}
+	return &overs, nil
 }
