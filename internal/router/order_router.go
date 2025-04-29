@@ -22,6 +22,7 @@ func orderRouter(db *sqlx.DB) *http.ServeMux {
 	mux.HandleFunc("POST /", handOrd.PostOrder)
 	mux.HandleFunc("PUT /{id}", handOrd.PutOrderByID)
 	mux.HandleFunc("POST /{id}/close", handOrd.PostOrdCloseById)
+	mux.HandleFunc("POST /batch-process", handOrd.BatchProcess)
 
 	return mux
 }

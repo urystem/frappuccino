@@ -20,11 +20,17 @@ type OrderDalInter interface {
 	InsertOrder(*models.Order) error
 	UpdateOrder(uint64, *models.Order) error
 	CloseOrder(uint64) error
+	BulkOrderProcessing(orders []models.Order) (*models.OutputBatches, error)
 }
 
 func ReturnDulOrderDB(db *sqlx.DB) OrderDalInter {
 	return &dalOrder{database: db}
 }
+
+// const (
+// 	setRepeatableRead string = ""
+// 	repeatableRead2   string = ""
+// )
 
 func (db *dalOrder) SelectAllOrders() ([]models.Order, error) {
 	tx, err := db.database.Beginx()
@@ -188,7 +194,8 @@ func (db *dalOrder) inventoryUpdaterByOrderAndSetTotal(tx *sqlx.Tx, id uint64, i
 	}
 	defer stmt.Close()
 
-	notEnoughInventsQ := `SELECT id, name, ABS(garbage) AS not_enough
+	notEnoughInventsQ := `
+	SELECT id, name, ABS(garbage) AS not_enough
 		FROM (
   			SELECT 
 				inv.id,
@@ -218,10 +225,10 @@ func (db *dalOrder) inventoryUpdaterByOrderAndSetTotal(tx *sqlx.Tx, id uint64, i
 
 	var wasError bool
 	for i, item := range *items {
-		var isHasInMenu bool
-		if err = stmt.QueryRow(item.ProductID).Scan(&isHasInMenu); err != nil {
+		var hasInMenu bool
+		if err = stmt.QueryRow(item.ProductID).Scan(&hasInMenu); err != nil {
 			return err
-		} else if (*items)[i].NotEnoungIngs = nil; !isHasInMenu {
+		} else if (*items)[i].NotEnoungIngs = nil; !hasInMenu {
 			(*items)[i].Warning = "not found in menu"
 			wasError = true
 
@@ -320,3 +327,122 @@ func (db *dalOrder) CloseOrder(id uint64) error {
 // SELECT inv.id, inv.quantity-(ings.quantity * $1) AS notEnough FROM inventory AS inv JOIN menu_item_ingredients AS ings ON inv.id=ings.inventory_id WHERE ings.product_id = $2 AND inv.quantity-(ings.quantity * $1)<0;
 
 // SELECT inv.id, inv.quantity-(ings.quantity * $1) AS notEnough FROM inventory AS inv JOIN menu_item_ingredients AS ings ON inv.id=ings.inventory_id WHERE ings.product_id = $2 AND inv.quantity-(ings.quantity * $1)<0;
+
+func (db *dalOrder) BulkOrderProcessing(orders []models.Order) (*models.OutputBatches, error) {
+	tx, err := db.database.Beginx()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	// isolation level 3
+	_, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+	if err != nil {
+		return nil, err
+	}
+
+	insertQ := `
+		INSERT INTO orders 
+		(customer_name, allergens)
+		VALUES($1,$2)
+		RETURNING id`
+	stmt, err := tx.Prepare(insertQ)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	stmt2, err := tx.Prepare(`SELECT EXISTS(SELECT 1 FROM menu_items WHERE id = $1)`)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt2.Close()
+
+	hasnotEnoughInventsQ := `
+		WITH insufficient AS (
+		SELECT 
+			inv.id,
+			inv.name,
+			inv.quantity - ings.quantity * $2 AS garbage
+		FROM 
+			inventory inv
+		JOIN 
+			menu_item_ingredients ings ON inv.id = ings.inventory_id
+		WHERE 
+			ings.product_id = $1
+	)
+	SELECT EXISTS (SELECT 1 FROM insufficient WHERE garbage < 0)`
+
+	stmt3, err := tx.Prepare(hasnotEnoughInventsQ)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt3.Close()
+
+	query := `
+	SELECT 
+		inv.id,
+		inv.name,
+		ings.quantity * $2 AS quantity_used,
+		inv.quantity - ings.quantity * $2 AS remaining
+	FROM 
+		inventory inv
+	JOIN 
+		menu_item_ingredients ings ON inv.id = ings.inventory_id
+	WHERE 
+		ings.product_id = $1`
+
+	stmt4, err := tx.Preparex(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt4.Close()
+	ingUpdater := func(in []models.InventoryUpdate, out *[]models.InventoryUpdate) {
+		
+	}
+
+	// stmt4, err := tx.PrepareNamed(`INSERT INTO order_items VALUES(:order_id, :product_id, :quantity)`)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// defer stmt4.Close()
+
+	batch := models.OutputBatches{Processed: make([]models.ProcessedOrder, len(orders))}
+	batch.Summary.TotalOrders = uint64(len(orders))
+
+	for i, order := range orders {
+		// create id
+		err = stmt.QueryRow(order.CustomerName, order.Allergens).Scan(&order.ID)
+		if err != nil {
+			return nil, err
+		}
+		var checker bool
+		for _, item := range order.Items {
+			// for hasInMenu check
+			if err = stmt2.QueryRow(item.ProductID).Scan(&checker); err != nil {
+				return nil, err
+			} else if !checker {
+				batch.Processed[i].Reason = "not found in menu"
+				break
+				// check hasnotEnoughInventsQ
+			} else if err = stmt3.QueryRow(item.ProductID, item.Quantity).Scan(&checker); err != nil {
+				return nil, err
+			} else if !checker {
+				batch.Processed[i].Reason = "not enough in inventory"
+				break
+			}
+		}
+		// skip this order
+		if checker {
+			continue
+		}
+		for _, item := range order.Items {
+			var invUpdates []models.InventoryUpdate
+			err = stmt4.Select(&invUpdates, item.ProductID, item.Quantity)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+	}
+	return &batch, tx.Commit()
+}

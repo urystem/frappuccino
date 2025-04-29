@@ -21,7 +21,7 @@ type ordHandInt interface {
 	PostOrder(w http.ResponseWriter, r *http.Request)
 	PutOrderByID(w http.ResponseWriter, r *http.Request)
 	PostOrdCloseById(w http.ResponseWriter, r *http.Request)
-	
+	BatchProcess(w http.ResponseWriter, r *http.Request)
 }
 
 func ReturnOrdHaldStruct(ordSerInt service.OrdServiceInter) ordHandInt {
@@ -180,38 +180,19 @@ func (h *ordHandToService) PostOrdCloseById(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+func (h *ordHandToService) BatchProcess(w http.ResponseWriter, r *http.Request) {
+	var batch models.PostSomeOrders
+	if r.Header.Get("Content-Type") != "application/json" {
+		slog.Error("batch: content_Type must be application/json")
+		writeHttp(w, http.StatusBadRequest, "content/type", "not json")
+		return
+	}
 
-
-// func (h *ordHandToService) PopularItem(w http.ResponseWriter, r *http.Request) {
-// 	if sortedItems, err := h.orderService.GetServicePopularItem(); err != nil {
-// 		slog.Error("Error", "get popular items list:", err)
-// 		writeHttp(w, http.StatusInternalServerError, "get popular items", err.Error())
-// 	} else if err = bodyJsonStruct(w, sortedItems); err != nil {
-// 		slog.Error("Error write sorted items to body")
-// 	} else {
-// 		slog.Info("get popular items success")
-// 	}
-// }
-
-// func checkOrdStruct(ord *models.Order) error {
-// 	if checkName(ord.CustomerName) {
-// 		return errors.New("invalid name")
-// 	}
-
-// 	if len(ord.Items) == 0 {
-// 		return errors.New("empty items")
-// 	}
-
-// 	if ord.ID != "" || ord.Status != "" || ord.CreatedAt != "" {
-// 		return errors.New("you cannot give to other fields")
-// 	}
-
-// 	for _, v := range ord.Items {
-// 		if checkName(v.ProductID) {
-// 			return errors.New("invalid item name: " + v.ProductID)
-// 		} else if v.Quantity <= 0 {
-// 			return errors.New("Invalid quantity of item: " + v.ProductID)
-// 		}
-// 	}
-// 	return nil
-// }
+	err := json.NewDecoder(r.Body).Decode(&batch)
+	if err != nil {
+		slog.Error("incorrect input to post order", "error", err)
+		writeHttp(w, http.StatusBadRequest, "input json", err.Error())
+		return
+	}
+	h.orderService.CreateSomeOrders(&batch)
+}

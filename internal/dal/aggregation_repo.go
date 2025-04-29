@@ -1,8 +1,6 @@
 package dal
 
 import (
-	"database/sql"
-	"fmt"
 	"time"
 
 	"frappuccino/models"
@@ -186,7 +184,7 @@ func (db *dalAggregation) PeriodMonth(month time.Month) ([]map[string]uint64, er
 			EXTRACT(MONTH FROM created_at) = $1
 		GROUP BY day
 		ORDER BY day`
-	rows, err := db.database.Query(query, month)
+	rows, err := db.database.Queryx(query, month)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +203,7 @@ func (db *dalAggregation) PeriodYear(year int) ([]map[string]uint64, error) {
 		AND status = 'accepted'
 	GROUP BY month, EXTRACT(MONTH FROM created_at)
 	ORDER BY EXTRACT(MONTH FROM created_at)`
-	rows, err := db.database.Query(query, year)
+	rows, err := db.database.Queryx(query, year)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +211,7 @@ func (db *dalAggregation) PeriodYear(year int) ([]map[string]uint64, error) {
 	return db.rowsToMap(rows)
 }
 
-func (db *dalAggregation) rowsToMap(rows *sql.Rows) ([]map[string]uint64, error) {
+func (db *dalAggregation) rowsToMap(rows *sqlx.Rows) ([]map[string]uint64, error) {
 	var result []map[string]uint64
 	for rows.Next() {
 		var day string
@@ -234,11 +232,17 @@ func (db *dalAggregation) GetLeftOversRepo(over *models.GetLeftOvers) error {
 	}
 	defer tx.Rollback()
 	var countRows uint64
+	// isolation level 3
+	_, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+	if err != nil {
+		return err
+	}
+
 	err = tx.Get(&countRows, `SELECT COUNT(*) FROM inventory`)
 	if err != nil {
 		return err
 	}
-	fmt.Println(countRows)
+
 	query := `
 		SELECT 
 			id, name, quantity, price
@@ -256,6 +260,8 @@ func (db *dalAggregation) GetLeftOversRepo(over *models.GetLeftOvers) error {
 	if err != nil {
 		return err
 	}
-	over.TotalPages = countRows / over.PageSize
+	over.TotalPages = (countRows + over.PageSize - 1) / over.PageSize
+	over.HasNextPage = over.CurrentPage < over.TotalPages
 	return tx.Commit()
 }
+

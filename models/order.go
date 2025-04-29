@@ -29,4 +29,30 @@ type OrderItem struct {
 	} `json:"not_enough,omitempty"`
 }
 
-// need not enough inventories
+type PostSomeOrders struct {
+	Orders []Order `json:"orders"`
+}
+
+type ProcessedOrder struct {
+	Order
+	Reason string `json:"reason"`
+}
+
+type InventoryUpdate struct {
+	InventoryID  uint64  `json:"ingredient_id" db:"id"`
+	Name         string  `json:"name" db:"name"`
+	QuantityUsed float64 `json:"quantity_used" db:"quantity_used"`
+	Remaining    float64 `json:"remaining" db:"remaining"`
+}
+
+type OutputBatches struct {
+	Processed []ProcessedOrder `json:"processed_orders"`
+
+	Summary struct {
+		TotalOrders      uint64            `json:"total_orders"`
+		Accepted         uint64            `json:"accepted"`
+		Rejected         uint64            `json:"rejected"`
+		TotalRevenue     float64           `json:"total_revenue"`
+		InventoryUpdates []InventoryUpdate `json:"inventory_updates"`
+	} `json:"summary"`
+}
