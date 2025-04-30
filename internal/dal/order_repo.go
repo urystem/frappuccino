@@ -3,6 +3,7 @@ package dal
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"frappuccino/models"
 
@@ -351,7 +352,7 @@ func (db *dalOrder) BulkOrderProcessing(orders []models.Order) (*models.OutputBa
 	}
 	defer stmt.Close()
 
-	stmt2, err := tx.Prepare(`SELECT EXISTS(SELECT 1 FROM menu_items WHERE id = $1)`)
+	stmt2, err := tx.Preparex(`SELECT EXISTS(SELECT 1 FROM menu_items WHERE id = $1)`)
 	if err != nil {
 		return nil, err
 	}
@@ -397,18 +398,69 @@ func (db *dalOrder) BulkOrderProcessing(orders []models.Order) (*models.OutputBa
 	}
 	defer stmt4.Close()
 	ingUpdater := func(in []models.InventoryUpdate, out *[]models.InventoryUpdate) {
-		
+		for _, invent := range in {
+			var isHere bool
+			for i, inv := range *out {
+				if inv.InventoryID == invent.InventoryID {
+					(*out)[i].QuantityUsed += invent.QuantityUsed
+					isHere = true
+					break
+				}
+			}
+			if !isHere {
+				*out = append(*out, invent)
+			}
+		}
 	}
 
-	// stmt4, err := tx.PrepareNamed(`INSERT INTO order_items VALUES(:order_id, :product_id, :quantity)`)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// defer stmt4.Close()
+	stmt5, err := tx.Prepare(`INSERT INTO order_items VALUES($1, $2, $3)`)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt5.Close()
+
+	stmt6Q := `
+	UPDATE 
+		inventory AS inv
+	SET 
+		quantity = inv.quantity - (ings.quantity * ord.quantity)
+	FROM 
+		menu_item_ingredients AS ings
+	JOIN 
+		order_items AS ord ON ings.product_id = ord.product_id
+	WHERE 
+		inv.id = ings.inventory_id 
+		AND ord.order_id = $1`
+	stmt6, err := tx.Prepare(stmt6Q)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt6.Close()
+
+	totalQ := `
+	SELECT SUM(m.price * o.quantity)
+	FROM menu_items AS m
+	JOIN order_items AS o ON m.id = o.product_id
+	WHERE o.order_id = $1`
+
+	stmt7, err := tx.Preparex(totalQ)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt7.Close()
+
+	orderUpdateTotal := `UPDATE orders
+	SET total = $1
+	WHERE id = $2`
+	stmt8, err := tx.Prepare(orderUpdateTotal)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt8.Close()
 
 	batch := models.OutputBatches{Processed: make([]models.ProcessedOrder, len(orders))}
 	batch.Summary.TotalOrders = uint64(len(orders))
-
+	fmt.Println(orders)
 	for i, order := range orders {
 		// create id
 		err = stmt.QueryRow(order.CustomerName, order.Allergens).Scan(&order.ID)
@@ -416,9 +468,10 @@ func (db *dalOrder) BulkOrderProcessing(orders []models.Order) (*models.OutputBa
 			return nil, err
 		}
 		var checker bool
+		fmt.Println(order.Items)
 		for _, item := range order.Items {
-			// for hasInMenu check
-			if err = stmt2.QueryRow(item.ProductID).Scan(&checker); err != nil {
+			// its for hasInMenu check
+			if err = stmt2.Get(&checker, item.ProductID); err != nil {
 				return nil, err
 			} else if !checker {
 				batch.Processed[i].Reason = "not found in menu"
@@ -441,8 +494,46 @@ func (db *dalOrder) BulkOrderProcessing(orders []models.Order) (*models.OutputBa
 			if err != nil {
 				return nil, err
 			}
+			ingUpdater(invUpdates, &batch.Summary.InventoryUpdates)
+
+			// insert to order_items
+			fmt.Println(order.ID, item.ProductID, item.Quantity)
+			_, err = stmt5.Exec(order.ID, item.ProductID, item.Quantity)
+			if err != nil {
+				return nil, err
+			}
+		}
+		_, err = stmt6.Exec(order.ID)
+		if err != nil {
+			return nil, err
 		}
 
+		var total float64
+		err = stmt7.Get(&total)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = stmt8.Exec(total, order.ID)
+		if err != nil {
+			return nil, err
+		}
+		batch.Processed[i].Total = &total
+		batch.Summary.TotalRevenue += total
 	}
 	return &batch, tx.Commit()
+}
+
+func (db *dalOrder) BulkOrderProcessing2(orders []models.Order) ([]models.InventoryUpdate, error) {
+	tx, err := db.database.Beginx()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	
+
+
+
+
+	return nil, tx.Commit()
 }
