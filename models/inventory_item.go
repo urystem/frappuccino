@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type Inventory struct {
 	ID         uint64  `json:"ingredient_id" db:"id"`
@@ -29,3 +32,10 @@ type InventoryDepend struct {
 	} `json:"menu_items"`
 }
 
+var (
+	ErrIngName         = errors.New("invalid name")
+	ErrIngQuantity     = errors.New("invalid quantity")
+	ErrIngReorderLevel = errors.New("invalid reorder")
+	ErrIngInvalidUnit  = errors.New("invalid unit")
+	ErrIngInvalidPrice = errors.New("invalid price")
+)

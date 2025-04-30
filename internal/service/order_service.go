@@ -45,10 +45,11 @@ func (ser *ordServiceToDal) CreateOrder(ord *models.Order) error {
 }
 
 func (ser *ordServiceToDal) UpgradeOrder(id uint64, ord *models.Order) error {
+	ord.ID = id
 	if err := ser.checkOrderStruct(ord); err != nil {
 		return err
 	}
-	return ser.ordDalInt.UpdateOrder(id, ord)
+	return ser.ordDalInt.UpdateOrder(ord)
 }
 
 func (ser *ordServiceToDal) ShutOrder(id uint64) error {
@@ -56,7 +57,6 @@ func (ser *ordServiceToDal) ShutOrder(id uint64) error {
 }
 
 func (ser *ordServiceToDal) CreateSomeOrders(batch *models.PostSomeOrders) (*models.OutputBatches, error) {
-	
 	return ser.ordDalInt.BulkOrderProcessing(batch.Orders)
 }
 

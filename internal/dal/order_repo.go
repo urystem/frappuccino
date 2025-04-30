@@ -19,19 +19,14 @@ type OrderDalInter interface {
 	SelectOrder(uint64) (*models.Order, error)
 	DeleteOrder(uint64) error
 	InsertOrder(*models.Order) error
-	UpdateOrder(uint64, *models.Order) error
+	UpdateOrder(*models.Order) error
 	CloseOrder(uint64) error
-	BulkOrderProcessing(orders []models.Order) (*models.OutputBatches, error)
+	BulkOrderProcessing([]models.Order) (*models.OutputBatches, error)
 }
 
 func ReturnDulOrderDB(db *sqlx.DB) OrderDalInter {
 	return &dalOrder{database: db}
 }
-
-// const (
-// 	setRepeatableRead string = ""
-// 	repeatableRead2   string = ""
-// )
 
 func (db *dalOrder) SelectAllOrders() ([]models.Order, error) {
 	tx, err := db.database.Beginx()
@@ -88,9 +83,15 @@ func (db *dalOrder) DeleteOrder(id uint64) error {
 		return err
 	}
 	// егер әлі жабылмаған тапсырыс болса inventory ді түгендейді
-	err = db.inventoryUpdaterByOrderAndSetTotal(tx, id, nil)
+	status, err := db.getStatus(tx, id)
 	if err != nil {
 		return errors.Join(err, tx.Rollback())
+	}
+	if status == "processing" {
+		err = db.inventoryRejector(tx, id)
+		if err != nil {
+			return errors.Join(err, tx.Rollback())
+		}
 	}
 	// жәй өшіре саламыз. order_items тен өзі өшіп кетеді
 	_, err = tx.Exec(`DELETE FROM orders WHERE id=$1`, id)
@@ -106,26 +107,47 @@ func (db *dalOrder) InsertOrder(ord *models.Order) error {
 		return err
 	}
 	defer tx.Rollback()
-	if err = tx.QueryRow(`INSERT INTO orders (customer_name, allergens)
+
+	if err = tx.QueryRow(`
+	INSERT INTO orders (customer_name, allergens)
 	VALUES($1,$2)
 	RETURNING id`, ord.CustomerName, ord.Allergens).Scan(&ord.ID); err != nil {
 		return err
 	}
-	err = db.inventoryUpdaterByOrderAndSetTotal(tx, ord.ID, &ord.Items)
+	ord.Total = new(float64)
+	*ord.Total, err = db.detectorAndInserterOrderItems(tx, ord.ID, ord.Items, nil)
 	if err != nil {
 		return err
 	}
-
 	return tx.Commit()
 }
 
-func (db *dalOrder) UpdateOrder(id uint64, ord *models.Order) error {
+func (db *dalOrder) UpdateOrder(ord *models.Order) error {
 	tx, err := db.database.Beginx()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	err = db.inventoryUpdaterByOrderAndSetTotal(tx, id, &ord.Items)
+	status, err := db.getStatus(tx, ord.ID)
+	if err != nil {
+		return err
+	}
+
+	if status != "processing" {
+		return errors.New("it is closed order")
+	}
+	err = db.inventoryRejector(tx, ord.ID)
+	if err != nil {
+		return err
+	}
+
+	// тазалау
+	_, err = tx.Exec(`DELETE FROM order_items WHERE order_id = $1`, ord.ID)
+	if err != nil {
+		return err
+	}
+	ord.Total = new(float64)
+	*ord.Total, err = db.detectorAndInserterOrderItems(tx, ord.ID, ord.Items, nil)
 	if err != nil {
 		return err
 	}
@@ -139,167 +161,6 @@ func (db *dalOrder) UpdateOrder(id uint64, ord *models.Order) error {
 		return err
 	}
 	return tx.Commit()
-}
-
-func (db *dalOrder) getStatus(tx *sqlx.Tx, id uint64) (string, error) {
-	var status string
-	err := tx.Get(&status, `SELECT status FROM orders WHERE id=$1`, id)
-	if err == sql.ErrNoRows {
-		return "", models.ErrNotFound
-	} else if err != nil {
-		return "", err
-	}
-	return status, nil
-}
-
-// delete, insert, update
-func (db *dalOrder) inventoryUpdaterByOrderAndSetTotal(tx *sqlx.Tx, id uint64, items *[]models.OrderItem) error {
-	// getting a status of order
-	status, err := db.getStatus(tx, id)
-	if err != nil {
-		return err
-	}
-	// тапсырыс әлі орындалмаған болса, қосамыз
-	if status == "processing" {
-		// update жасар алдында міндетті түрде селектпен тексеру керек екен)
-		_, err := tx.Exec(`UPDATE inventory AS inv
-		SET quantity = inv.quantity + (ings.quantity * ord.quantity)
-		FROM menu_item_ingredients AS ings
-		JOIN order_items AS ord ON ings.product_id = ord.product_id
-		WHERE inv.id = ings.inventory_id AND ord.order_id = $1`, id)
-		// UPDATE inventory AS inv SET quantity = inv.quantity+(i.quantity * o.quantity) FROM menu_item_ingredients AS i JOIN order_items AS o ON i.product_id = o.product_id WHERE o.order_id = 1;
-		if err != nil {
-			return err
-		}
-
-	} else if items != nil { // егер бұл update болса, әрі ол processing емес болса
-		return errors.New("order closed: you cannot update")
-	}
-
-	// егер delete ке болса
-	if items == nil {
-		return nil
-	}
-
-	// update үшін тазалап аламыз
-	if _, err = tx.Exec(`DELETE FROM order_items WHERE order_id = $1`, id); err != nil {
-		return err
-	}
-
-	// menuде бар жоғын тексереміз
-	// stmt, err := tx.Prepare(`SELECT TRUE FROM menu WHERE id = $1`)
-	// EXISTS возвращает true или false
-	stmt, err := tx.Prepare(`SELECT EXISTS(SELECT 1 FROM menu_items WHERE id = $1)`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	notEnoughInventsQ := `
-	SELECT id, name, ABS(garbage) AS not_enough
-		FROM (
-  			SELECT 
-				inv.id,
-				inv.name,
-				inv.quantity - ings.quantity * $2 AS garbage
-  			FROM 
-				inventory inv
-  			JOIN 
-    			menu_item_ingredients ings ON inv.id = ings.inventory_id
-  			WHERE 
-    			ings.product_id = $1
-		) sub
-	WHERE 
-		garbage < 0`
-	// SELECT id AS inventory_id, ABS(garbage) AS not_enough FROM (SELECT inv.id, inv.quantity - ings.quantity * $2 AS garbage FROM inventory inv JOIN menu_item_ingredients ings ON inv.id = ings.inventory_id WHERE ings.product_id = $1) sub WHERE garbage < 0;
-	stmt2, err := tx.Preparex(notEnoughInventsQ)
-	if err != nil {
-		return err
-	}
-	defer stmt2.Close()
-
-	stmt3, err := tx.PrepareNamed(`INSERT INTO order_items VALUES(:order_id, :product_id, :quantity)`)
-	if err != nil {
-		return err
-	}
-	defer stmt3.Close()
-
-	var wasError bool
-	for i, item := range *items {
-		var hasInMenu bool
-		if err = stmt.QueryRow(item.ProductID).Scan(&hasInMenu); err != nil {
-			return err
-		} else if (*items)[i].NotEnoungIngs = nil; !hasInMenu {
-			(*items)[i].Warning = "not found in menu"
-			wasError = true
-
-		} else if err = stmt2.Select(&(*items)[i].NotEnoungIngs, item.ProductID, item.Quantity); err != nil {
-			return err
-		} else if len((*items)[i].NotEnoungIngs) != 0 {
-			(*items)[i].Warning = "not enough in inventory"
-			wasError = true
-		} else if !wasError { // insert to order_items
-			item.OrderId = id
-			_, err = stmt3.Exec(item)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	if wasError {
-		// *items = slices.DeleteFunc(*items, func(item models.OrderItem) bool {
-		// 	return len(item.Err) != 0
-		// })
-		var invalidItemsCount uint64
-		for _, item := range *items {
-			if len(item.Warning) != 0 {
-				(*items)[invalidItemsCount] = item
-				invalidItemsCount++
-			}
-		}
-		*items = (*items)[:invalidItemsCount]
-		return models.ErrOrderItems
-	}
-
-	// updater inventory
-	_, err = tx.Exec(`UPDATE inventory AS inv
-		SET quantity = inv.quantity - (ings.quantity * ord.quantity)
-		FROM menu_item_ingredients AS ings
-		JOIN order_items AS ord ON ings.product_id = ord.product_id
-		WHERE inv.id = ings.inventory_id AND ord.order_id = $1`, id)
-	if err != nil {
-		return err
-	}
-
-	totalQ := `
-	SELECT SUM(m.price * o.quantity)
-	FROM menu_items AS m
-	JOIN order_items AS o ON m.id = o.product_id
-	WHERE o.order_id = $1`
-
-	var total float64
-	err = tx.Get(&total, totalQ, id)
-	if err != nil {
-		return err
-	}
-
-	orderUpdateTotal := `UPDATE orders
-	SET total = $1
-	WHERE id = $2`
-
-	res, err := tx.Exec(orderUpdateTotal, total, id)
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return err
-	} else if rowsAffected == 0 {
-		return errors.New("no rows were updated — order with id not found")
-	}
-	return nil
 }
 
 func (db *dalOrder) CloseOrder(id uint64) error {
@@ -323,6 +184,172 @@ func (db *dalOrder) CloseOrder(id uint64) error {
 		return err
 	}
 	return tx.Commit()
+}
+
+func (db *dalOrder) getStatus(tx *sqlx.Tx, id uint64) (string, error) {
+	var status string
+	err := tx.Get(&status, `SELECT status FROM orders WHERE id=$1`, id)
+	if err == sql.ErrNoRows {
+		return "", models.ErrNotFound
+	} else if err != nil {
+		return "", err
+	}
+	return status, nil
+}
+
+func (db *dalOrder) inventoryRejector(tx *sqlx.Tx, orderID uint64) error {
+	_, err := tx.Exec(`UPDATE inventory AS inv
+	SET quantity = inv.quantity + (ings.quantity * ord.quantity)
+	FROM menu_item_ingredients AS ings
+	JOIN order_items AS ord ON ings.product_id = ord.product_id
+	WHERE inv.id = ings.inventory_id AND ord.order_id = $1`, orderID)
+	// UPDATE inventory AS inv SET quantity = inv.quantity+(i.quantity * o.quantity) FROM menu_item_ingredients AS i JOIN order_items AS o ON i.product_id = o.product_id WHERE o.order_id = 1;
+	return err
+}
+
+func (db *dalOrder) mergerInv(in []models.InventoryUpdate, out *[]models.InventoryUpdate) {
+	for _, invent := range in {
+		var isHere bool
+		for i, inv := range *out {
+			if inv.InventoryID == invent.InventoryID {
+				(*out)[i].QuantityUsed += invent.QuantityUsed
+				isHere = true
+				break
+			}
+		}
+		if !isHere {
+			*out = append(*out, invent)
+		}
+	}
+}
+
+func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, orderID uint64, items []models.OrderItem, invsTemp *[]models.InventoryUpdate) (float64, error) {
+	stmt, err := tx.Preparex(`SELECT TRUE FROM menu_items WHERE id = $1`)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	notEnoughInventsQ := `
+	SELECT id, name, ABS(garbage) AS not_enough
+		FROM (
+  			SELECT 
+				inv.id,
+				inv.name,
+				inv.quantity - ings.quantity * $2 AS garbage
+  			FROM 
+				inventory inv
+  			JOIN 
+    			menu_item_ingredients ings ON inv.id = ings.inventory_id
+  			WHERE 
+    			ings.product_id = $1
+		) sub
+	WHERE 
+		garbage < 0`
+	// SELECT id AS inventory_id, ABS(garbage) AS not_enough FROM (SELECT inv.id, inv.quantity - ings.quantity * $2 AS garbage FROM inventory inv JOIN menu_item_ingredients ings ON inv.id = ings.inventory_id WHERE ings.product_id = $1) sub WHERE garbage < 0;
+	stmt2, err := tx.Preparex(notEnoughInventsQ)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt2.Close()
+
+	stmt3, err := tx.Prepare(`INSERT INTO order_items VALUES($1, $2, $3)`)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt3.Close()
+
+	remaining := `
+	SELECT 
+		inv.id,
+		inv.name,
+		ings.quantity * $2 AS quantity_used,
+		inv.quantity - ings.quantity * $2 AS remaining
+	FROM 
+		inventory inv
+	JOIN 
+		menu_item_ingredients ings ON inv.id = ings.inventory_id
+	WHERE 
+		ings.product_id = $1`
+
+	stmt4, err := tx.Preparex(remaining)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt4.Close()
+
+	// minus inventory
+	minusInvCycle := `
+	UPDATE inventory AS inv
+	SET quantity = inv.quantity - (mi.quantity * $2)
+	FROM menu_item_ingredients AS mi
+	JOIN menu_items AS m ON mi.product_id = m.id
+	WHERE mi.inventory_id = inv.id
+  	AND m.id = $1;`
+
+	stmt5, err := tx.Prepare(minusInvCycle)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt5.Close()
+
+	var wasError bool
+	for i, item := range items {
+		var hasInMenu, notEnough bool
+		if err = stmt.Get(&hasInMenu, item.ProductID); err != nil {
+			return 0, err
+		} else if items[i].NotEnoungIngs = nil; !hasInMenu {
+			items[i].Warning = "not found in menu"
+			wasError = true
+		} else if err = stmt2.Select(&items[i].NotEnoungIngs, item.ProductID, item.Quantity); err != nil {
+			return 0, err
+		} else if len(items[i].NotEnoungIngs) != 0 {
+			items[i].Warning = "not enough in inventory"
+			wasError = true
+			notEnough = true
+		} else if !wasError { // insert to order_items
+			_, err = stmt3.Exec(orderID, item.ProductID, item.Quantity)
+			if err != nil {
+				return 0, err
+			} else if invsTemp != nil {
+				// 1 ингридентті 1 тапсырыста 2 меню сол 1еуін қолдануы мүмкін сол үшін керек
+				var invsTempTemp []models.InventoryUpdate
+				err = stmt4.Select(&invsTempTemp, item.ProductID, item.Quantity)
+				if err != nil {
+					return 0, err
+				}
+				db.mergerInv(invsTempTemp, invsTemp)
+			}
+		}
+
+		if hasInMenu && !notEnough {
+			_, err = stmt5.Exec(item.ProductID, item.Quantity)
+			if err != nil {
+				return 0, err
+			}
+		}
+	}
+	if wasError {
+		return 0, models.ErrOrderItems
+	}
+	totalQ := `
+	SELECT SUM(m.price * o.quantity)
+	FROM menu_items AS m
+	JOIN order_items AS o ON m.id = o.product_id
+	WHERE o.order_id = $1`
+
+	var total float64
+	err = tx.Get(&total, totalQ, orderID)
+	if err != nil {
+		return 0, err
+	}
+
+	orderUpdateTotal := `UPDATE orders
+	SET total = $1
+	WHERE id = $2`
+
+	_, err = tx.Exec(orderUpdateTotal, total, orderID)
+	return total, err
 }
 
 // SELECT inv.id, inv.quantity-(ings.quantity * $1) AS notEnough FROM inventory AS inv JOIN menu_item_ingredients AS ings ON inv.id=ings.inventory_id WHERE ings.product_id = $2 AND inv.quantity-(ings.quantity * $1)<0;
@@ -397,21 +424,6 @@ func (db *dalOrder) BulkOrderProcessing(orders []models.Order) (*models.OutputBa
 		return nil, err
 	}
 	defer stmt4.Close()
-	ingUpdater := func(in []models.InventoryUpdate, out *[]models.InventoryUpdate) {
-		for _, invent := range in {
-			var isHere bool
-			for i, inv := range *out {
-				if inv.InventoryID == invent.InventoryID {
-					(*out)[i].QuantityUsed += invent.QuantityUsed
-					isHere = true
-					break
-				}
-			}
-			if !isHere {
-				*out = append(*out, invent)
-			}
-		}
-	}
 
 	stmt5, err := tx.Prepare(`INSERT INTO order_items VALUES($1, $2, $3)`)
 	if err != nil {
@@ -458,7 +470,7 @@ func (db *dalOrder) BulkOrderProcessing(orders []models.Order) (*models.OutputBa
 	}
 	defer stmt8.Close()
 
-	batch := models.OutputBatches{Processed: make([]models.ProcessedOrder, len(orders))}
+	batch := models.OutputBatches{Processed: make([]models.Order, len(orders))}
 	batch.Summary.TotalOrders = uint64(len(orders))
 	fmt.Println(orders)
 	for i, order := range orders {
@@ -494,7 +506,7 @@ func (db *dalOrder) BulkOrderProcessing(orders []models.Order) (*models.OutputBa
 			if err != nil {
 				return nil, err
 			}
-			ingUpdater(invUpdates, &batch.Summary.InventoryUpdates)
+			db.mergerInv(invUpdates, &batch.Summary.InventoryUpdates)
 
 			// insert to order_items
 			fmt.Println(order.ID, item.ProductID, item.Quantity)
@@ -524,16 +536,18 @@ func (db *dalOrder) BulkOrderProcessing(orders []models.Order) (*models.OutputBa
 	return &batch, tx.Commit()
 }
 
-func (db *dalOrder) BulkOrderProcessing2(orders []models.Order) ([]models.InventoryUpdate, error) {
-	tx, err := db.database.Beginx()
-	if err != nil {
-		return nil, err
+func (db *dalOrder) BulkOrderProcessing2(orders []models.Order) (*models.OutputBatches, error) {
+	bulk := &models.OutputBatches{Processed: orders}
+	for _, order := range orders {
+		tx, err := db.database.Beginx()
+		if err != nil {
+			return nil, err
+		}
+		err = db.InsertOrder(&order)
+		if err != nil {
+			return nil, errors.Join(tx.Rollback(), err)
+		}
+		tx.Commit()
 	}
-	defer tx.Rollback()
-	
-
-
-
-
-	return nil, tx.Commit()
+	return bulk, nil
 }

@@ -16,7 +16,7 @@ func NewPoint(x, y int) *Point {
 }
 
 func main() {
-	r := NewPoint(1, 2)
+	// r := NewPoint(1, 2)
 
 	// Пример времени с локальным часовым поясом
 	monthTime := time.Date(2025, time.January, 1, 0, 0, 0, 0, time.Local)
