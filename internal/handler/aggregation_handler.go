@@ -30,14 +30,11 @@ func (h *aggregationHandler) TotalSales(w http.ResponseWriter, r *http.Request) 
 		writeHttp(w, http.StatusInternalServerError, "failed to get total sales:", err.Error())
 	} else {
 		slog.Info("Succes", "Get total sales:", total)
-		err = bodyJsonStruct(w, struct {
+		bodyJsonStruct(w, struct {
 			Total_sales float64 // `json: "total_sales"`
 		}{total}, http.StatusOK)
-		if err != nil {
-			slog.Error("")
-		} else {
-			slog.Info("succes")
-		}
+
+		slog.Info("succes")
 	}
 }
 
@@ -49,12 +46,9 @@ func (h *aggregationHandler) PopularItems(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = bodyJsonStruct(w, popularItems, http.StatusOK)
-	if err != nil {
-		slog.Error("Get popular sales", "error", err)
-	} else {
-		slog.Info("succes")
-	}
+	bodyJsonStruct(w, popularItems, http.StatusOK)
+
+	slog.Info("succes")
 }
 
 func (h *aggregationHandler) NumberOfOrderedItems(w http.ResponseWriter, r *http.Request) {
@@ -68,12 +62,9 @@ func (h *aggregationHandler) NumberOfOrderedItems(w http.ResponseWriter, r *http
 		return
 	}
 
-	err = bodyJsonStruct(w, numberOf, http.StatusOK)
-	if err != nil {
-		slog.Error("Get number of sales", "error", err)
-	} else {
-		slog.Info("succes")
-	}
+	bodyJsonStruct(w, numberOf, http.StatusOK)
+
+	slog.Info("succes")
 }
 
 func (h *aggregationHandler) FullTextSearchReport(w http.ResponseWriter, r *http.Request) {
@@ -86,12 +77,9 @@ func (h *aggregationHandler) FullTextSearchReport(w http.ResponseWriter, r *http
 		slog.Error("Get search", "error", err)
 		return
 	}
-	err = bodyJsonStruct(w, res, http.StatusOK)
-	if err != nil {
-		slog.Error("Get search", "error", err)
-	} else {
-		slog.Info("succes")
-	}
+	bodyJsonStruct(w, res, http.StatusOK)
+
+	slog.Info("succes")
 }
 
 func (h *aggregationHandler) PeriodOrderedItems(w http.ResponseWriter, r *http.Request) {
@@ -107,11 +95,7 @@ func (h *aggregationHandler) PeriodOrderedItems(w http.ResponseWriter, r *http.R
 		slog.Error(err.Error())
 		return
 	}
-	err = bodyJsonStruct(w, orderStats, http.StatusOK)
-	if err != nil {
-		slog.Error(err.Error())
-		return
-	}
+	bodyJsonStruct(w, orderStats, http.StatusOK)
 	slog.Info("succes")
 }
 
@@ -121,15 +105,10 @@ func (h *aggregationHandler) GetLeftOvers(w http.ResponseWriter, r *http.Request
 	pageSize := r.URL.Query().Get("pageSize")
 	overs, err := h.aggreService.GetLeftOversService(sortBy, page, pageSize)
 	if err != nil {
-		slog.Error("overs", err)
+		slog.Error("Get", "overs", err)
 		writeHttp(w, http.StatusBadRequest, "error", err.Error())
 		return
 	}
-	err = bodyJsonStruct(w, overs, http.StatusOK)
-	if err != nil {
-		slog.Error("overs", err)
-		writeHttp(w, http.StatusBadRequest, "error", err.Error())
-		return
-	}
-	slog.Info("overs", "OK")
+	bodyJsonStruct(w, overs, http.StatusOK)
+	slog.Info("Get", "overs", "OK")
 }

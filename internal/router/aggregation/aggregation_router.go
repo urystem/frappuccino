@@ -15,8 +15,9 @@ type aggregationRoute struct {
 }
 
 type AggregationRouters interface {
-	AggregationReportRouter() *http.ServeMux
-	AggregationsAsRootMux() *http.ServeMux
+	AggregationReportRouter() *http.ServeMux // report
+	AggregationsAsRootMux() *http.ServeMux   // /
+	// inventory
 }
 
 // constructor

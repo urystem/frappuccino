@@ -1,6 +1,8 @@
 package models
 
-import "github.com/lib/pq"
+import (
+	"github.com/lib/pq"
+)
 
 type MenuItem struct {
 	ID          uint64            `json:"product_id" db:"id" `
@@ -23,3 +25,15 @@ type MenuDepend struct {
 	Err    string  `json:"error"`
 	Orders []Order `json:"orders"`
 }
+
+// var (
+// 	ErrMenuInput  = errors.New("bad request")
+// 	ErrMenuName   = fmt.Errorf("%w: invalid name", ErrMenuInput)
+// 	ErrMenuDesc   = fmt.Errorf("%w: invalid description", ErrMenuInput)
+// 	ErrMenuNoTags = fmt.Errorf("%w: no tags", ErrMenuInput)
+// 	ErrMenuPrice  = fmt.Errorf("%w: negative menu price", ErrMenuInput)
+// 	ErrMenuIngs   = fmt.Errorf("%w: empty ingridents", ErrMenuInput)
+
+// 	ErrMenuNameConflict = errors.New("conflict")
+// 	ErrMenuNotFound     = errors.New("menu not found")
+// )

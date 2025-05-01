@@ -1,7 +1,7 @@
 package service
 
 import (
-	"errors"
+	"fmt"
 
 	"frappuccino/internal/dal"
 	"frappuccino/models"
@@ -41,7 +41,7 @@ func (ser *ordServiceToDal) CreateOrder(ord *models.Order) error {
 	if err := ser.checkOrderStruct(ord); err != nil {
 		return err
 	}
-	return ser.ordDalInt.InsertOrder(ord)
+	return ser.ordDalInt.InsertOrder(ord, nil)
 }
 
 func (ser *ordServiceToDal) UpgradeOrder(id uint64, ord *models.Order) error {
@@ -57,15 +57,25 @@ func (ser *ordServiceToDal) ShutOrder(id uint64) error {
 }
 
 func (ser *ordServiceToDal) CreateSomeOrders(batch *models.PostSomeOrders) (*models.OutputBatches, error) {
-	return ser.ordDalInt.BulkOrderProcessing(batch.Orders)
+	var notValid bool
+	for i := range batch.Orders {
+		err := ser.checkOrderStruct(&batch.Orders[i])
+		if err != nil {
+		}
+	}
+	if notValid {
+		return nil, nil
+	}
+
+	return ser.ordDalInt.BulkOrderProcessing2(batch.Orders), nil
 }
 
 func (ser *ordServiceToDal) checkOrderStruct(ord *models.Order) error {
 	if isInvalidName(ord.CustomerName) {
-		return errors.New("invalid name")
+		return fmt.Errorf("%w : invalid name", models.ErrBadInput)
 	}
 	if len(ord.Items) == 0 {
-		return errors.New("emyty items")
+		return fmt.Errorf("%w : empty items", models.ErrBadInput)
 	}
 	forTestUniqItems := map[uint64]int{}
 	for i, item := range ord.Items {
@@ -89,5 +99,5 @@ func (ser *ordServiceToDal) checkOrderStruct(ord *models.Order) error {
 		}
 	}
 	ord.Items = ord.Items[:duplicateds]
-	return models.ErrInputOrder
+	return models.ErrBadInputItems
 }

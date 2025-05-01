@@ -105,7 +105,7 @@ func (db *dalAggregation) SearchByWordInventory(find string, minPrice, maxPrice 
 	FROM ranked_inventory
 	WHERE relevance > 0.009
 	ORDER BY relevance DESC`
-
+	
 	return db.database.Select(&strc.Inventories, query, find, minPrice, maxPrice)
 }
 

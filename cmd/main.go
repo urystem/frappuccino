@@ -1,14 +1,11 @@
 package main
 
 import (
-	// "database/sql" // Import the database/sql package to interact with SQL databases
-	// Import the fmt package for formatted I/O (printing messages, etc.)
-	"fmt"
+	"fmt"      // Import the fmt package for formatted I/O (printing messages, etc.)
 	"log"      // Import the log package for logging errors
 	"net/http" // listen and serve
-	"os"
+	"os"       // Import the os package to access environment variables and other OS functions
 
-	// Import the os package to access environment variables and other OS functions
 	"frappuccino/internal/router" // for mux
 
 	// _ "github.com/jackc/pgx/v5/stdlib" // Import the pq PostgreSQL driver (side-effect import, it registers itself with database/sql)
@@ -17,18 +14,11 @@ import (
 
 func main() {
 	// Data Source Name
-	// dsn := fmt.Sprintf("postgres://%[1]s:%s@%s:%s/%s", // index starts at 1 in formatting
-	// 	os.Getenv("DB_USER"),
-	// 	os.Getenv("DB_PASSWORD"),
-	// 	os.Getenv("DB_HOST"),
-	// 	os.Getenv("DB_PORT"), // you can skip this env, if you use default posgresql port. 5432
-	// 	os.Getenv("DB_NAME"))
-
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+	dsn := fmt.Sprintf("postgres://%[1]s:%s@%s:%s/%s?sslmode=disable", // index starts at 1 in formatting
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
+		os.Getenv("DB_PORT"), // you can skip this env, if you use default posgresql port. 5432
 		os.Getenv("DB_NAME"))
 
 	// sqlx.Open мен аййырмашылығы, опен тек ашады, бірақ байланыс дереу орнатпайды.

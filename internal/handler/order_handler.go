@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -35,11 +36,7 @@ func (h *ordHandToService) GetOrders(w http.ResponseWriter, r *http.Request) {
 		writeHttp(w, http.StatusInternalServerError, "get orders: ", err.Error())
 		return
 	}
-	err = bodyJsonStruct(w, orders, http.StatusOK)
-	if err != nil {
-		slog.Error("Can't give all orders to body", "error", err)
-		return
-	}
+	bodyJsonStruct(w, orders, http.StatusOK)
 	slog.Info("Get orders success")
 }
 
@@ -54,13 +51,15 @@ func (h *ordHandToService) GetOrderByID(w http.ResponseWriter, r *http.Request) 
 	order, err := h.orderService.TakeOrder(id)
 	if err != nil {
 		slog.Error("Can't get order struct: ", "error", err)
-		writeHttp(w, http.StatusInternalServerError, "get order:", err.Error())
+		if errors.Is(err, models.ErrNotFound) {
+			writeHttp(w, http.StatusNotFound, "get order:", err.Error())
+		} else {
+			writeHttp(w, http.StatusInternalServerError, "get order:", err.Error())
+		}
 		return
 	}
-
-	if err = bodyJsonStruct(w, order, http.StatusOK); err != nil {
-		slog.Error("Get order: cannot write struct to the body")
-	}
+	bodyJsonStruct(w, order, http.StatusOK)
+	slog.Error("Get order: cannot write struct to the body")
 }
 
 func (h *ordHandToService) DelOrderByID(w http.ResponseWriter, r *http.Request) {
@@ -89,7 +88,7 @@ func (h *ordHandToService) PostOrder(w http.ResponseWriter, r *http.Request) {
 	var orderStruct models.Order
 	if r.Header.Get("Content-Type") != "application/json" {
 		slog.Error("post the menu: content_Type must be application/json")
-		writeHttp(w, http.StatusBadRequest, "content/type", "not json")
+		writeHttp(w, http.StatusUnsupportedMediaType, "content/type", "not json")
 		return
 	}
 	err := json.NewDecoder(r.Body).Decode(&orderStruct)
@@ -98,26 +97,37 @@ func (h *ordHandToService) PostOrder(w http.ResponseWriter, r *http.Request) {
 		writeHttp(w, http.StatusBadRequest, "input json", err.Error())
 		return
 	}
-	// if err := checkOrdStruct(&orderStruct); err != nil {
-	// 	slog.Error("invalid order struct in body")
-	// 	writeHttp(w, http.StatusBadRequest, "invalid struct", err.Error())
-	// 	return
-	// }
+
 	err = h.orderService.CreateOrder(&orderStruct)
-	if err != nil {
-		slog.Error("Failed to post order", "error", err)
-		if err == models.ErrInputOrder || err == models.ErrOrderItems {
-			err = bodyJsonStruct(w, orderStruct.Items, http.StatusBadRequest)
-			if err != nil {
-				slog.Error("Post order: Error in decoder")
-			}
-		} else {
-			writeHttp(w, http.StatusInternalServerError, "Error post order", err.Error())
-		}
-	} else {
+	if err == nil {
 		slog.Info("order created by : " + orderStruct.CustomerName)
 		writeHttp(w, http.StatusCreated, "succes", "order created by : "+orderStruct.CustomerName)
+		return
 	}
+
+	slog.Error("Failed to post order", "error", err)
+
+	if errors.Is(err, models.ErrBadInput) {
+		writeHttp(w, http.StatusBadRequest, "Error post order", err.Error())
+		return
+	}
+
+	if errors.Is(err, models.ErrBadInputItems) {
+		bodyJsonStruct(w, orderStruct.Items, http.StatusBadRequest)
+		return
+	}
+
+	if errors.Is(err, models.ErrOrderNotEnoughItems) {
+		bodyJsonStruct(w, orderStruct.Items, http.StatusFailedDependency)
+		return
+	}
+
+	if errors.Is(err, models.ErrNotFoundItems) {
+		bodyJsonStruct(w, orderStruct.Items, http.StatusNotFound)
+		return
+	}
+
+	writeHttp(w, http.StatusInternalServerError, "Error post order", err.Error())
 }
 
 func (h *ordHandToService) PutOrderByID(w http.ResponseWriter, r *http.Request) {
@@ -130,7 +140,7 @@ func (h *ordHandToService) PutOrderByID(w http.ResponseWriter, r *http.Request) 
 	var orderStruct models.Order
 	if r.Header.Get("Content-Type") != "application/json" {
 		slog.Error("post the menu: content_Type must be application/json")
-		writeHttp(w, http.StatusBadRequest, "content/type", "not json")
+		writeHttp(w, http.StatusUnsupportedMediaType, "content/type", "not json")
 		return
 	}
 	err = json.NewDecoder(r.Body).Decode(&orderStruct)
@@ -140,20 +150,35 @@ func (h *ordHandToService) PutOrderByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	err = h.orderService.UpgradeOrder(id, &orderStruct)
-	if err != nil {
-		slog.Error("Failed to put order", "error", err)
-		if err == models.ErrInputOrder || err == models.ErrOrderItems {
-			err = bodyJsonStruct(w, orderStruct.Items, http.StatusBadRequest)
-			if err != nil {
-				slog.Error("put order:", " Error in decoder", err)
-			}
-		} else {
-			writeHttp(w, http.StatusInternalServerError, "Error put order", err.Error())
-		}
-	} else {
+	if err == nil {
 		writeHttp(w, http.StatusInternalServerError, "Put order", "succes")
 		slog.Info("order updated: ", "success", id)
+		return
 	}
+
+	slog.Error("Failed to put order", "error", err)
+
+	if errors.Is(err, models.ErrBadInput) {
+		writeHttp(w, http.StatusBadRequest, "Error put order", err.Error())
+		return
+	}
+
+	if errors.Is(err, models.ErrBadInputItems) {
+		bodyJsonStruct(w, orderStruct.Items, http.StatusBadRequest)
+		return
+	}
+
+	if errors.Is(err, models.ErrNotFoundItems) {
+		bodyJsonStruct(w, orderStruct.Items, http.StatusNotFound)
+		return
+	}
+
+	if errors.Is(err, models.ErrOrderNotEnoughItems) {
+		bodyJsonStruct(w, orderStruct.Items, http.StatusFailedDependency)
+		return
+	}
+
+	writeHttp(w, http.StatusInternalServerError, "Error put order", err.Error())
 }
 
 func (h *ordHandToService) PostOrdCloseById(w http.ResponseWriter, r *http.Request) {
@@ -167,9 +192,9 @@ func (h *ordHandToService) PostOrdCloseById(w http.ResponseWriter, r *http.Reque
 	err = h.orderService.ShutOrder(id)
 	if err != nil {
 		slog.Error("Close order", "error id:", id)
-		if err == models.ErrNotFound {
+		if errors.Is(err, models.ErrNotFound) {
 			writeHttp(w, http.StatusNotFound, "order", err.Error())
-		} else if err == models.ErrOrdStatusClosed {
+		} else if errors.Is(err, models.ErrOrderStatusClosed) {
 			writeHttp(w, http.StatusBadRequest, "order already", err.Error())
 		} else {
 			writeHttp(w, http.StatusInternalServerError, "close order", err.Error())
@@ -184,7 +209,7 @@ func (h *ordHandToService) BatchProcess(w http.ResponseWriter, r *http.Request) 
 	var batch models.PostSomeOrders
 	if r.Header.Get("Content-Type") != "application/json" {
 		slog.Error("batch: content_Type must be application/json")
-		writeHttp(w, http.StatusBadRequest, "content/type", "not json")
+		writeHttp(w, http.StatusUnsupportedMediaType, "content/type", "not json")
 		return
 	}
 
@@ -194,5 +219,11 @@ func (h *ordHandToService) BatchProcess(w http.ResponseWriter, r *http.Request) 
 		writeHttp(w, http.StatusBadRequest, "input json", err.Error())
 		return
 	}
-	h.orderService.CreateSomeOrders(&batch)
+	response, err := h.orderService.CreateSomeOrders(&batch)
+	if err != nil {
+		slog.Error("incorrect input to post order", "error", err)
+		writeHttp(w, http.StatusBadRequest, "unknown erreke", err.Error())
+	}
+	slog.Info("Batch succes")
+	bodyJsonStruct(w, response, http.StatusOK)
 }

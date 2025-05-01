@@ -18,10 +18,10 @@ type OrderDalInter interface {
 	SelectAllOrders() ([]models.Order, error)
 	SelectOrder(uint64) (*models.Order, error)
 	DeleteOrder(uint64) error
-	InsertOrder(*models.Order) error
+	InsertOrder(*models.Order, *[]models.InventoryUpdate) error
 	UpdateOrder(*models.Order) error
 	CloseOrder(uint64) error
-	BulkOrderProcessing([]models.Order) (*models.OutputBatches, error)
+	BulkOrderProcessing2([]models.Order) *models.OutputBatches
 }
 
 func ReturnDulOrderDB(db *sqlx.DB) OrderDalInter {
@@ -101,12 +101,16 @@ func (db *dalOrder) DeleteOrder(id uint64) error {
 	return tx.Commit()
 }
 
-func (db *dalOrder) InsertOrder(ord *models.Order) error {
+func (db *dalOrder) InsertOrder(ord *models.Order, invUpdates *[]models.InventoryUpdate) error {
 	tx, err := db.database.Beginx()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
+	_, err = tx.Exec("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+	if err != nil {
+		return err
+	}
 
 	if err = tx.QueryRow(`
 	INSERT INTO orders (customer_name, allergens)
@@ -115,7 +119,7 @@ func (db *dalOrder) InsertOrder(ord *models.Order) error {
 		return err
 	}
 	ord.Total = new(float64)
-	*ord.Total, err = db.detectorAndInserterOrderItems(tx, ord.ID, ord.Items, nil)
+	*ord.Total, err = db.detectorAndInserterOrderItems(tx, ord.ID, ord.Items, invUpdates)
 	if err != nil {
 		return err
 	}
@@ -174,7 +178,7 @@ func (db *dalOrder) CloseOrder(id uint64) error {
 		return err
 	}
 	if status != "processing" {
-		return models.ErrOrdStatusClosed
+		return models.ErrOrderStatusClosed
 	}
 	_, err = tx.Exec(`UPDATE orders
 		SET status = 'accepted',
@@ -293,7 +297,7 @@ func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, orderID uint64, i
 	}
 	defer stmt5.Close()
 
-	var wasError bool
+	var wasError, wasNotEnough bool
 	for i, item := range items {
 		var hasInMenu, notEnough bool
 		if err = stmt.Get(&hasInMenu, item.ProductID); err != nil {
@@ -307,6 +311,7 @@ func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, orderID uint64, i
 			items[i].Warning = "not enough in inventory"
 			wasError = true
 			notEnough = true
+			wasNotEnough = true
 		} else if !wasError { // insert to order_items
 			_, err = stmt3.Exec(orderID, item.ProductID, item.Quantity)
 			if err != nil {
@@ -330,7 +335,10 @@ func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, orderID uint64, i
 		}
 	}
 	if wasError {
-		return 0, models.ErrOrderItems
+		if wasNotEnough {
+			return 0, models.ErrOrderNotEnoughItems // 424
+		}
+		return 0, models.ErrNotFoundItems // 404
 	}
 	totalQ := `
 	SELECT SUM(m.price * o.quantity)
@@ -536,18 +544,23 @@ func (db *dalOrder) BulkOrderProcessing(orders []models.Order) (*models.OutputBa
 	return &batch, tx.Commit()
 }
 
-func (db *dalOrder) BulkOrderProcessing2(orders []models.Order) (*models.OutputBatches, error) {
+func (db *dalOrder) BulkOrderProcessing2(orders []models.Order) *models.OutputBatches {
 	bulk := &models.OutputBatches{Processed: orders}
-	for _, order := range orders {
-		tx, err := db.database.Beginx()
+
+	for i := range bulk.Processed {
+		bulk.Summary.TotalOrders++
+
+		var invUpdates []models.InventoryUpdate
+
+		err := db.InsertOrder(&bulk.Processed[i], &invUpdates)
 		if err != nil {
-			return nil, err
+			bulk.Summary.Rejected++
+			fmt.Println(err)
+		} else {
+			bulk.Summary.TotalRevenue += *bulk.Processed[i].Total
+			bulk.Summary.Accepted++
+			db.mergerInv(invUpdates, &bulk.Summary.InventoryUpdates)
 		}
-		err = db.InsertOrder(&order)
-		if err != nil {
-			return nil, errors.Join(tx.Rollback(), err)
-		}
-		tx.Commit()
 	}
-	return bulk, nil
+	return bulk
 }

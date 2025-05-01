@@ -6,6 +6,7 @@ import (
 	"frappuccino/models"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 type dalMenu struct {
@@ -68,6 +69,9 @@ func (core *dalMenu) SelectMenu(id uint64) (*models.MenuItem, error) {
 
 	err = tx.Get(&menu, `SELECT * FROM menu_items WHERE id=$1`, id)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, models.ErrNotFound
+		}
 		return nil, err
 	}
 
@@ -142,8 +146,14 @@ func (core *dalMenu) InsertMenu(menuItems *models.MenuItem) error {
 		menuItems.Allergens,
 		menuItems.Price).Scan(&menuItems.ID)
 	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			if pqErr.Code == "23505" { // unique
+				return models.ErrConflict
+			}
+		}
 		return err
 	}
+
 	err = core.insertToMenuIngs(tx, menuItems.ID, menuItems.Ingredients)
 	if err != nil {
 		return err
@@ -220,7 +230,7 @@ func (core *dalMenu) checkIngs(tx *sqlx.Tx, ings *[]models.MenuIngredients) erro
 
 	if notFoundCount != 0 {
 		*ings = (*ings)[:notFoundCount]
-		return models.ErrIngsNotFound
+		return models.ErrNotFoundItems
 	}
 
 	return nil

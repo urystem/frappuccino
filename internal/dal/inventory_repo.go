@@ -1,9 +1,12 @@
 package dal
 
 import (
+	"database/sql"
+
 	"frappuccino/models"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 type dalInv struct {
@@ -88,13 +91,18 @@ func (core *dalInv) InsertInventoryV5(inv *models.Inventory) error {
 		inv.ReorderLvl,
 		inv.Unit,
 		inv.Price).Scan(&inv.ID); err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			if pqErr.Code == "23505" { // unique
+				return models.ErrConflict
+			}
+		}
 		return err
 	}
-
-	if _, err = tx.NamedExec(`
+	_, err = tx.NamedExec(`
 	INSERT INTO inventory_transactions (inventory_id, quantity_change, reason)
 		VALUES (:id, :quantity, 'restock')
-	`, inv); err != nil {
+	`, inv)
+	if err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -137,7 +145,11 @@ func (core *dalInv) SelectAllInventories() ([]models.Inventory, error) {
 
 func (core *dalInv) SelectInventory(id uint64) (*models.Inventory, error) {
 	var inv models.Inventory
-	return &inv, core.db.Get(&inv, "SELECT * FROM inventory WHERE id = $1", id)
+	err := core.db.Get(&inv, "SELECT * FROM inventory WHERE id = $1", id)
+	if err == sql.ErrNoRows {
+		return nil, models.ErrNotFound
+	}
+	return &inv, err
 }
 
 func (core *dalInv) UpdateInventory(inv *models.Inventory) error {
@@ -150,6 +162,9 @@ func (core *dalInv) UpdateInventory(inv *models.Inventory) error {
 	var quantity_changed float64
 	// err = tx.QueryRow(`SELECT quantity FROM inventory WHERE id=$1`,inv.ID).Scan(&oldQuantity)
 	if err = tx.Get(&quantity_changed, `SELECT quantity FROM inventory WHERE id=$1`, inv.ID); err != nil {
+		if err == sql.ErrNoRows {
+			return models.ErrNotFound
+		}
 		return err
 	}
 
@@ -162,18 +177,6 @@ func (core *dalInv) UpdateInventory(inv *models.Inventory) error {
 		return err
 	}
 
-	// UPDATE егер id табылмаса да қате қайтармайды.
-	// сондықтан кестенің өзгерісін rowsAffected пен тексереміз
-	// егер айди бар болып, бірақ жаңа кестеден айырмасы жоқ болса да, rowsAffected =1 болады
-	// демек тек жоқ айдиде ғана 0 болады
-	// rowsAffected, err := res.RowsAffected()
-	// if err != nil {
-	// 	return err
-	// }
-
-	// if rowsAffected == 0 {
-	// 	return models.ErrNotFound
-	// }
 	quantity_changed = inv.Quantity - quantity_changed
 
 	reason := "restock"
@@ -210,7 +213,6 @@ func (core *dalInv) DeleteInventory(id uint64) (*models.InventoryDepend, error) 
 	}
 
 	if len(menuDepend.Menus) != 0 {
-		menuDepend.Err = models.ErrDelDepend.Error()
 		return &menuDepend, nil
 	}
 	res, err := tx.Exec(`DELETE FROM inventory WHERE id = $1`, id)

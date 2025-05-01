@@ -1,7 +1,7 @@
 package service
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 
 	"frappuccino/internal/dal"
@@ -55,24 +55,24 @@ func (ser *menuServiceToDal) UpgradeMenu(menu *models.MenuItem) error {
 
 func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) error {
 	if isInvalidName(menu.Name) {
-		return errors.New("invalid name")
+		return fmt.Errorf("%w: invalid name - %s", models.ErrBadInput, menu.Name)
 	}
 
 	menu.Description = strings.TrimSpace(menu.Description)
 
 	if len(menu.Description) == 0 {
-		return errors.New("empty description")
+		return fmt.Errorf("%w: empty description", models.ErrBadInput)
 	}
 	if len(menu.Tags) == 0 {
-		return errors.New("no tags")
+		return fmt.Errorf("%w: no tags", models.ErrBadInput)
 	}
 
 	if menu.Price < 0 {
-		return errors.New("negative menu price")
+		return fmt.Errorf("%w: negative menu price", models.ErrBadInput)
 	}
 
 	if len(menu.Ingredients) == 0 {
-		return errors.New("empty ingridents")
+		return fmt.Errorf("%w: empty ingridents", models.ErrBadInput)
 	}
 
 	forTestUniqIngs, invalids := map[uint64]struct{}{}, map[uint64]struct{}{}
@@ -109,5 +109,5 @@ func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) error {
 		}
 	}
 	menu.Ingredients = menu.Ingredients[:invalidCount]
-	return models.InvalidIngs
+	return models.ErrBadInputItems
 }
