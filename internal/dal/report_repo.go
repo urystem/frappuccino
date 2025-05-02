@@ -264,4 +264,3 @@ func (db *dalAggregation) GetLeftOversRepo(over *models.GetLeftOvers) error {
 	over.HasNextPage = over.CurrentPage < over.TotalPages
 	return tx.Commit()
 }
-

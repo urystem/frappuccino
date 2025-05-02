@@ -30,10 +30,10 @@ type OrderItem struct {
 	} `json:"not_enough,omitempty"`
 }
 
+// input
 type PostSomeOrders struct {
 	Orders []Order `json:"orders"`
 }
-
 
 type InventoryUpdate struct {
 	InventoryID  uint64  `json:"ingredient_id" db:"id"`
@@ -42,6 +42,7 @@ type InventoryUpdate struct {
 	Remaining    float64 `json:"remaining" db:"remaining"`
 }
 
+// output
 type OutputBatches struct {
 	Processed []Order `json:"processed_orders"`
 

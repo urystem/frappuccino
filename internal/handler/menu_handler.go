@@ -113,13 +113,15 @@ func (handMenu *menuHandToService) PostMenu(w http.ResponseWriter, r *http.Reque
 	}
 
 	slog.Error("Post menu", "error", err)
-	if errors.Is(err, models.ErrBadInput) {
-		writeHttp(w, http.StatusUnprocessableEntity, "failed", "menu input:")
-		return
-	}
 
+	//ErrBadInputItems дегеннің ішінде ErrBadInput бар
+	//
 	if errors.Is(err, models.ErrBadInputItems) {
 		bodyJsonStruct(w, menuStruct.Ingredients, http.StatusUnprocessableEntity)
+		return
+	}
+	if errors.Is(err, models.ErrBadInput) {
+		writeHttp(w, http.StatusUnprocessableEntity, "failed", "menu input:")
 		return
 	}
 
@@ -157,17 +159,18 @@ func (handMenu *menuHandToService) PutMenuByID(w http.ResponseWriter, r *http.Re
 	if err == nil {
 		slog.Info("Menu: ", "Updated Menu by id: ", id)
 		writeHttp(w, http.StatusOK, "Updated Menu by id: ", "")
+		return
 	}
 
 	slog.Error("Put menu by id", "error", err)
 
-	if errors.Is(err, models.ErrBadInput) {
-		writeHttp(w, http.StatusBadRequest, "error put menu", err.Error())
+	if errors.Is(err, models.ErrBadInputItems) {
+		bodyJsonStruct(w, menuStruct.Ingredients, http.StatusBadRequest)
 		return
 	}
 
-	if errors.Is(err, models.ErrBadInputItems) {
-		bodyJsonStruct(w, menuStruct.Ingredients, http.StatusBadRequest)
+	if errors.Is(err, models.ErrBadInput) {
+		writeHttp(w, http.StatusBadRequest, "error put menu", err.Error())
 		return
 	}
 

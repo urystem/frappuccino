@@ -6,3 +6,12 @@ Dirty Read (грязное чтение)	                            ✅	       
 Non-repeatable Read (неповторяющееся чтение)	        ✅	            ✅	                ❌	            ❌
 Phantom Read (фантомные строки)	                        ✅	            ✅	                ❌                  ❌
 
+
+
+ON DELETE NO ACTION
+ON DELETE RESTRICT
+
+
+ON DELETE CASCADE
+ON DELETE SET NULL
+

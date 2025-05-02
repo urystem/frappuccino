@@ -1,7 +1,9 @@
 package service
 
 import (
+	"errors"
 	"fmt"
+	"time"
 
 	"frappuccino/internal/dal"
 	"frappuccino/models"
@@ -18,7 +20,7 @@ type OrdServiceInter interface {
 	CreateOrder(*models.Order) error
 	UpgradeOrder(id uint64, ord *models.Order) error
 	ShutOrder(uint64) error
-	CreateSomeOrders(batch *models.PostSomeOrders) (*models.OutputBatches, error)
+	CreateSomeOrders(batch *models.OutputBatches) error
 }
 
 func ReturnOrdSerStruct(ord dal.OrderDalInter) OrdServiceInter {
@@ -56,18 +58,59 @@ func (ser *ordServiceToDal) ShutOrder(id uint64) error {
 	return ser.ordDalInt.CloseOrder(id)
 }
 
-func (ser *ordServiceToDal) CreateSomeOrders(batch *models.PostSomeOrders) (*models.OutputBatches, error) {
-	var notValid bool
-	for i := range batch.Orders {
-		err := ser.checkOrderStruct(&batch.Orders[i])
+func (ser *ordServiceToDal) CreateSomeOrders(bulk *models.OutputBatches) error {
+	var unknownErr error
+
+	var wasBadInput, wasNotEnough bool
+
+	for i := range bulk.Processed {
+		bulk.Summary.TotalOrders++
+		bulk.Processed[i].CreatedAt = time.Time{}
+		bulk.Processed[i].UpdatedAt = time.Time{}
+		err := ser.checkOrderStruct(&bulk.Processed[i])
+
 		if err != nil {
+			bulk.Processed[i].Reason = "bad input"
+			wasBadInput = true
+		} else if err = ser.ordDalInt.InsertOrder(&bulk.Processed[i], &bulk.Summary.InventoryUpdates); err == nil { // err==nil
+			bulk.Summary.TotalRevenue += *bulk.Processed[i].Total
+			bulk.Summary.Accepted++
+			bulk.Processed[i].Status = "accepted"
+			bulk.Processed[i].Items = nil
+			continue
+		} else if errors.Is(err, models.ErrOrderNotEnoughItems) {
+			bulk.Processed[i].Reason = "insufficient_inventory"
+			wasNotEnough = true
+		} else if errors.Is(err, models.ErrNotFoundItems) {
+			bulk.Processed[i].Reason = "ErrNotFoundItems"
+		} else { // critical error
+			unknownErr = err
+			bulk.Processed[i].Reason = fmt.Sprintf("unknown error: %s", err.Error())
 		}
+		bulk.Summary.Rejected++
+		bulk.Processed[i].Status = "rejected"
+
+		// bulk.Processed[i].Items = nil
 	}
-	if notValid {
-		return nil, nil
+	if unknownErr != nil { // 500
+		return unknownErr
 	}
 
-	return ser.ordDalInt.BulkOrderProcessing2(batch.Orders), nil
+	if bulk.Summary.Rejected == 0 { // 200
+		return nil
+	}
+
+	if bulk.Summary.Accepted != 0 { // 207
+		return models.ErrOrdersMultiStatus
+	}
+	// значить все были Rejected
+	if wasBadInput { // 400
+		return models.ErrBadInput
+	}
+	if wasNotEnough {
+		return models.ErrOrderNotEnoughItems
+	}
+	return models.ErrNotFoundItems
 }
 
 func (ser *ordServiceToDal) checkOrderStruct(ord *models.Order) error {
@@ -78,26 +121,30 @@ func (ser *ordServiceToDal) checkOrderStruct(ord *models.Order) error {
 		return fmt.Errorf("%w : empty items", models.ErrBadInput)
 	}
 	forTestUniqItems := map[uint64]int{}
+	var hasZeroQuantity bool
 	for i, item := range ord.Items {
 		ord.Items[i].Warning = ""
-		if ind, x := forTestUniqItems[item.ProductID]; x {
+		if item.Quantity == 0 {
+			ord.Items[i].Warning = "zero quantity"
+			hasZeroQuantity = true
+		} else if ind, x := forTestUniqItems[item.ProductID]; x {
 			ord.Items[ind].Warning = "duplicated"
 			ord.Items[i].Warning = "duplicated"
 		}
 		forTestUniqItems[item.ProductID] = i
 	}
 
-	if len(forTestUniqItems) == len(ord.Items) {
+	if len(forTestUniqItems) == len(ord.Items) && !hasZeroQuantity {
 		return nil
 	}
 
-	var duplicateds uint64
+	var invalids uint64
 	for _, item := range ord.Items {
-		if _, x := forTestUniqItems[item.ProductID]; x {
-			ord.Items[duplicateds] = item
-			duplicateds++
+		if len(item.Warning) == 0 {
+			ord.Items[invalids] = item
+			invalids++
 		}
 	}
-	ord.Items = ord.Items[:duplicateds]
+	ord.Items = ord.Items[:invalids]
 	return models.ErrBadInputItems
 }

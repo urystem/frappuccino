@@ -63,7 +63,7 @@ func (ser *inventoryServiceDal) RemoveInventory(id uint64) (*models.InventoryDep
 		}
 		return nil, err
 	}
-	if len(menuDepend.Menus) != 0 {
+	if menuDepend != nil && len(menuDepend.Menus) != 0 {
 		menuDepend.Err = "Found Depends"
 		return menuDepend, nil
 	}

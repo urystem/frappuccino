@@ -3,8 +3,6 @@ package router
 import (
 	"net/http"
 
-	"frappuccino/internal/router/aggregation" // for mux
-
 	"github.com/jmoiron/sqlx"
 )
 
@@ -21,14 +19,9 @@ func Allrouter(db *sqlx.DB) *http.ServeMux {
 	orderMux := orderRouter(db)
 	addPrefixToRouter("/orders", muxRoot, orderMux)
 
-	aggregations := aggregation.NewAggregationRouter(db)
-
-	reports := aggregations.AggregationReportRouter()
+	reports := aggregationReportRouter(db)
 	addPrefixToRouter("/reports", muxRoot, reports)
 
-	asRoot := aggregations.AggregationsAsRootMux()
-	addPrefixToRouter("", muxRoot, asRoot)
-	
 	return muxRoot
 }
 

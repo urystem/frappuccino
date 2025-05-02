@@ -107,13 +107,12 @@ func (h *ordHandToService) PostOrder(w http.ResponseWriter, r *http.Request) {
 
 	slog.Error("Failed to post order", "error", err)
 
-	if errors.Is(err, models.ErrBadInput) {
-		writeHttp(w, http.StatusBadRequest, "Error post order", err.Error())
-		return
-	}
-
 	if errors.Is(err, models.ErrBadInputItems) {
 		bodyJsonStruct(w, orderStruct.Items, http.StatusBadRequest)
+		return
+	}
+	if errors.Is(err, models.ErrBadInput) {
+		writeHttp(w, http.StatusBadRequest, "Error post order", err.Error())
 		return
 	}
 
@@ -158,13 +157,12 @@ func (h *ordHandToService) PutOrderByID(w http.ResponseWriter, r *http.Request) 
 
 	slog.Error("Failed to put order", "error", err)
 
-	if errors.Is(err, models.ErrBadInput) {
-		writeHttp(w, http.StatusBadRequest, "Error put order", err.Error())
-		return
-	}
-
 	if errors.Is(err, models.ErrBadInputItems) {
 		bodyJsonStruct(w, orderStruct.Items, http.StatusBadRequest)
+		return
+	}
+	if errors.Is(err, models.ErrBadInput) {
+		writeHttp(w, http.StatusBadRequest, "Error put order", err.Error())
 		return
 	}
 
@@ -206,24 +204,36 @@ func (h *ordHandToService) PostOrdCloseById(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *ordHandToService) BatchProcess(w http.ResponseWriter, r *http.Request) {
-	var batch models.PostSomeOrders
+	var inputOrders models.PostSomeOrders
 	if r.Header.Get("Content-Type") != "application/json" {
 		slog.Error("batch: content_Type must be application/json")
 		writeHttp(w, http.StatusUnsupportedMediaType, "content/type", "not json")
 		return
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&batch)
+	err := json.NewDecoder(r.Body).Decode(&inputOrders)
 	if err != nil {
 		slog.Error("incorrect input to post order", "error", err)
 		writeHttp(w, http.StatusBadRequest, "input json", err.Error())
 		return
 	}
-	response, err := h.orderService.CreateSomeOrders(&batch)
+	bulk := models.OutputBatches{Processed: inputOrders.Orders}
+	err = h.orderService.CreateSomeOrders(&bulk)
+	code := http.StatusOK // 200
 	if err != nil {
 		slog.Error("incorrect input to post order", "error", err)
-		writeHttp(w, http.StatusBadRequest, "unknown erreke", err.Error())
+		if errors.Is(err, models.ErrOrdersMultiStatus) {
+			code = http.StatusMultiStatus // 207
+		} else if errors.Is(err, models.ErrBadInput) {
+			code = http.StatusUnprocessableEntity // 422
+		} else if errors.Is(err, models.ErrOrderNotEnoughItems) {
+			code = http.StatusFailedDependency // 424
+		} else if errors.Is(err, models.ErrNotFoundItems) {
+			code = http.StatusNotFound // 404
+		} else {
+			code = http.StatusInternalServerError // 500
+		}
 	}
-	slog.Info("Batch succes")
-	bodyJsonStruct(w, response, http.StatusOK)
+	slog.Info("Bulk pushed")
+	bodyJsonStruct(w, bulk, code)
 }

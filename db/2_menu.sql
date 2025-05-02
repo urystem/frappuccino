@@ -10,7 +10,7 @@ CREATE TABLE menu_items (
 
 CREATE TABLE menu_item_ingredients (
     product_id INT NOT NULL REFERENCES menu_items (id) ON DELETE CASCADE,
-    inventory_id INT NOT NULL REFERENCES inventory (id),
+    inventory_id INT NOT NULL REFERENCES inventory (id),--ON DELETE NO ACTION --(default)
     -- FOREIGN KEY (inventory_id) REFERENCES inventory (id),
     quantity FLOAT NOT NULL CHECK (quantity > 0),
     PRIMARY KEY (product_id, inventory_id)
