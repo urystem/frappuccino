@@ -24,6 +24,7 @@ type InventoryDataAccess interface {
 	SelectInventory(uint64) (*models.Inventory, error)
 	UpdateInventory(*models.Inventory) error
 	DeleteInventory(uint64) (*models.InventoryDepend, error)
+	SelectAllInventoryTransaction() ([]models.InventoryTransaction, error)
 }
 
 func ReturnDalInvCore(db *sqlx.DB) InventoryDataAccess {
@@ -229,4 +230,13 @@ func (core *dalInv) DeleteInventory(id uint64) (*models.InventoryDepend, error) 
 		return nil, models.ErrNotFound
 	}
 	return nil, tx.Commit()
+}
+
+func (core *dalInv) SelectAllInventoryTransaction() ([]models.InventoryTransaction, error) {
+	var inventoryTransactions []models.InventoryTransaction
+	err := core.db.Select(&inventoryTransactions, `SELECT * FROM inventory_transactions ORDER BY updated_at ASC`)
+	if err != nil {
+		return nil, err
+	}
+	return inventoryTransactions, nil
 }

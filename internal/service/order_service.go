@@ -21,6 +21,7 @@ type OrdServiceInter interface {
 	UpgradeOrder(id uint64, ord *models.Order) error
 	ShutOrder(uint64) error
 	CreateSomeOrders(batch *models.OutputBatches) error
+	CollectStatusHistory() ([]models.StatusHistory, error)
 }
 
 func ReturnOrdSerStruct(ord dal.OrderDalInter) OrdServiceInter {
@@ -111,6 +112,10 @@ func (ser *ordServiceToDal) CreateSomeOrders(bulk *models.OutputBatches) error {
 		return models.ErrOrderNotEnoughItems
 	}
 	return models.ErrNotFoundItems
+}
+
+func (ser *ordServiceToDal) CollectStatusHistory() ([]models.StatusHistory, error) {
+	return ser.ordDalInt.SelectAllStatusHistory()
 }
 
 func (ser *ordServiceToDal) checkOrderStruct(ord *models.Order) error {

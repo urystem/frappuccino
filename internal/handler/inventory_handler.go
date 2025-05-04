@@ -21,6 +21,7 @@ type inventoryHandlerInt interface {
 	GetInventoryByID(w http.ResponseWriter, r *http.Request)
 	PutInventory(w http.ResponseWriter, r *http.Request)
 	DeleteInventory(w http.ResponseWriter, r *http.Request)
+	GetInventoryHistory(w http.ResponseWriter, r *http.Request)
 }
 
 func NewInventoryHandler(service service.InventoryService) inventoryHandlerInt {
@@ -164,4 +165,15 @@ func (handl *inventoryHandler) DeleteInventory(w http.ResponseWriter, r *http.Re
 	}
 	slog.Info("Deleted invent", "id", id)
 	writeHttp(w, http.StatusNoContent, "", "")
+}
+
+func (handl *inventoryHandler) GetInventoryHistory(w http.ResponseWriter, r *http.Request) {
+	invHis, err := handl.invSrv.CollectInventoryHistory()
+	if err != nil {
+		slog.Error("Invent history", "failed:", err)
+		writeHttp(w, http.StatusInternalServerError, "Invent history", err.Error())
+		return
+	}
+	slog.Info("Invent history succes")
+	bodyJsonStruct(w, invHis, http.StatusOK)
 }

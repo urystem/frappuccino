@@ -1,11 +1,13 @@
 package models
 
 import (
+	"time"
+
 	"github.com/lib/pq"
 )
 
 type MenuItem struct {
-	ID          uint64            `json:"product_id" db:"id" `
+	ID          uint64            `json:"product_id" db:"id"`
 	Name        string            `json:"name" db:"name"`
 	Description string            `json:"description" db:"description"`
 	Tags        pq.StringArray    `json:"tags" db:"tags"`           /*pgtype.Array[string]*/
@@ -26,14 +28,10 @@ type MenuDepend struct {
 	Orders []Order `json:"orders"`
 }
 
-// var (
-// 	ErrMenuInput  = errors.New("bad request")
-// 	ErrMenuName   = fmt.Errorf("%w: invalid name", ErrMenuInput)
-// 	ErrMenuDesc   = fmt.Errorf("%w: invalid description", ErrMenuInput)
-// 	ErrMenuNoTags = fmt.Errorf("%w: no tags", ErrMenuInput)
-// 	ErrMenuPrice  = fmt.Errorf("%w: negative menu price", ErrMenuInput)
-// 	ErrMenuIngs   = fmt.Errorf("%w: empty ingridents", ErrMenuInput)
-
-// 	ErrMenuNameConflict = errors.New("conflict")
-// 	ErrMenuNotFound     = errors.New("menu not found")
-// )
+type PriceHistory struct {
+	ID        uint64    `json:"history_id" db:"id"`
+	ProductID uint64    `json:"product_id" db:"product_id"`
+	OldPrice  float64   `json:"old_price" db:"old_price"`
+	NewPrice  float64   `json:"new_price" db:"new_price"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}

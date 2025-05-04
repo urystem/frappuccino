@@ -18,6 +18,7 @@ type InventoryService interface {
 	TakeInventory(uint64) (*models.Inventory, error)
 	UpgradeInventory(*models.Inventory) error
 	RemoveInventory(uint64) (*models.InventoryDepend, error)
+	CollectInventoryHistory() ([]models.InventoryTransaction, error)
 }
 
 func ReturnInventorySerInt(dalInter dal.InventoryDataAccess) InventoryService {
@@ -83,4 +84,8 @@ func (ser *inventoryServiceDal) checkInventStruct(inv *models.Inventory) error {
 		return fmt.Errorf("%w : invalid price - %f", models.ErrBadInput, inv.Price)
 	}
 	return nil
+}
+
+func (ser *inventoryServiceDal) CollectInventoryHistory() ([]models.InventoryTransaction, error) {
+	return ser.invDal.SelectAllInventoryTransaction()
 }

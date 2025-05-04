@@ -23,6 +23,7 @@ type ordHandInt interface {
 	PutOrderByID(w http.ResponseWriter, r *http.Request)
 	PostOrdCloseById(w http.ResponseWriter, r *http.Request)
 	BatchProcess(w http.ResponseWriter, r *http.Request)
+	GetAllStatusHistory(w http.ResponseWriter, r *http.Request)
 }
 
 func ReturnOrdHaldStruct(ordSerInt service.OrdServiceInter) ordHandInt {
@@ -236,4 +237,15 @@ func (h *ordHandToService) BatchProcess(w http.ResponseWriter, r *http.Request) 
 	}
 	slog.Info("Bulk pushed")
 	bodyJsonStruct(w, bulk, code)
+}
+
+func (h *ordHandToService) GetAllStatusHistory(w http.ResponseWriter, r *http.Request) {
+	history, err := h.orderService.CollectStatusHistory()
+	if err != nil {
+		slog.Error("order status history", "failed:", err)
+		writeHttp(w, http.StatusInternalServerError, "get status history", err.Error())
+		return
+	}
+	slog.Info("order status history succes")
+	bodyJsonStruct(w, history, http.StatusOK)
 }

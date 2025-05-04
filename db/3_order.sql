@@ -1,4 +1,4 @@
-CREATE TYPE order_status AS ENUM ('processing', 'accepted', 'rejected');
+CREATE TYPE order_status AS ENUM ('processing', 'accepted');
 
 CREATE TABLE orders (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -78,7 +78,7 @@ VALUES (
     ),
     (
         'Charlie Brown',
-        'rejected',
+        'accepted',
         NULL,
         0.00,
         '2024-01-15',
@@ -118,7 +118,7 @@ VALUES (
     ),
     (
         'Henry Moore',
-        'rejected',
+        'accepted',
         NULL,
         0.00,
         '2024-02-14',
@@ -158,7 +158,7 @@ VALUES (
     ),
     (
         'Noah Wright',
-        'rejected',
+        'accepted',
         NULL,
         0.00,
         '2024-03-10',
@@ -198,7 +198,7 @@ VALUES (
     ),
     (
         'Samuel Nelson',
-        'rejected',
+        'accepted',
         NULL,
         0.00,
         '2024-04-05',
@@ -238,7 +238,7 @@ VALUES (
     ),
     (
         'Xavier Brown',
-        'rejected',
+        'accepted',
         NULL,
         0.00,
         '2024-04-30',
@@ -278,7 +278,7 @@ VALUES (
     ),
     (
         'Catherine Lewis',
-        'rejected',
+        'accepted',
         NULL,
         0.00,
         '2024-05-25',
@@ -344,12 +344,12 @@ INSERT INTO
     order_status_history (order_id, status, updated_at)
 VALUES (1, 'processing', '2024-01-05'),
     (2, 'accepted', '2024-01-11'),
-    (3, 'rejected', '2024-01-16'),
+    (3, 'accepted', '2024-01-16'),
     (4, 'processing', '2024-01-20'),
     (5, 'accepted', '2024-01-26'),
     (6, 'processing', '2024-02-02'),
     (7, 'accepted', '2024-02-09'),
-    (8, 'rejected', '2024-02-15'),
+    (8, 'accepted', '2024-02-15'),
     (9, 'processing', '2024-02-20'),
     (10, 'accepted', '2024-02-26'),
     (
@@ -358,7 +358,7 @@ VALUES (1, 'processing', '2024-01-05'),
         '2024-03-01'
     ),
     (12, 'accepted', '2024-03-06'),
-    (13, 'rejected', '2024-03-11'),
+    (13, 'accepted', '2024-03-11'),
     (
         14,
         'processing',

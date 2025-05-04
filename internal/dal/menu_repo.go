@@ -19,6 +19,7 @@ type MenuDalInter interface {
 	DeleteMenu(uint64) (*models.MenuDepend, error)
 	InsertMenu(*models.MenuItem) error
 	UpdateMenu(*models.MenuItem) error
+	SelectPriceHistory() ([]models.PriceHistory, error)
 }
 
 func ReturnDalMenuCore(db *sqlx.DB) MenuDalInter {
@@ -205,6 +206,15 @@ func (core *dalMenu) UpdateMenu(menuItems *models.MenuItem) error {
 		return err
 	}
 	return tx.Commit()
+}
+
+func (core *dalMenu) SelectPriceHistory() ([]models.PriceHistory, error) {
+	var history []models.PriceHistory
+	err := core.db.Select(&history, "SELECT * FROM price_history ORDER BY updated_at ASC")
+	if err != nil {
+		return nil, err
+	}
+	return history, nil
 }
 
 func (core *dalMenu) checkIngs(tx *sqlx.Tx, ings *[]models.MenuIngredients) error {

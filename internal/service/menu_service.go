@@ -18,6 +18,7 @@ type MenuServiceInter interface {
 	DelServiceMenuById(uint64) (*models.MenuDepend, error)
 	CreateMenu(*models.MenuItem) error
 	UpgradeMenu(*models.MenuItem) error
+	CollectHistory() ([]models.PriceHistory, error)
 }
 
 func ReturnMenuSerStruct(interMenuDal dal.MenuDalInter) MenuServiceInter {
@@ -51,6 +52,10 @@ func (ser *menuServiceToDal) UpgradeMenu(menu *models.MenuItem) error {
 	}
 
 	return ser.menuDal.UpdateMenu(menu)
+}
+
+func (ser *menuServiceToDal) CollectHistory() ([]models.PriceHistory, error) {
+	return ser.menuDal.SelectPriceHistory()
 }
 
 func (ser *menuServiceToDal) checkMenuStruct(menu *models.MenuItem) error {

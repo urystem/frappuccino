@@ -54,3 +54,10 @@ type OutputBatches struct {
 		InventoryUpdates []InventoryUpdate `json:"inventory_updates"`
 	} `json:"summary"`
 }
+
+type StatusHistory struct {
+	ID      uint64    `json:"history_id" db:"id"`
+	OrderID uint64    `json:"order_id" db:"order_id"`
+	Status  string    `json:"status" db:"status"`
+	Updated time.Time `json:"updated_at" db:"updated_at"`
+}

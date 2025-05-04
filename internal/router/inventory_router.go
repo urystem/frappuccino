@@ -22,5 +22,6 @@ func inventoryRouter(db *sqlx.DB) *http.ServeMux {
 	mux.HandleFunc("GET /{id}", handInvInt.GetInventoryByID)
 	mux.HandleFunc("PUT /{id}", handInvInt.PutInventory)
 	mux.HandleFunc("DELETE /{id}", handInvInt.DeleteInventory)
+	mux.HandleFunc("GET /history", handInvInt.GetInventoryHistory)
 	return mux
 }

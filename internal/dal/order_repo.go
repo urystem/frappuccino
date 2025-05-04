@@ -20,6 +20,7 @@ type OrderDalInter interface {
 	InsertOrder(*models.Order, *[]models.InventoryUpdate) error
 	UpdateOrder(*models.Order) error
 	CloseOrder(uint64) error
+	SelectAllStatusHistory() ([]models.StatusHistory, error)
 }
 
 func ReturnDulOrderDB(db *sqlx.DB) OrderDalInter {
@@ -188,6 +189,15 @@ func (db *dalOrder) CloseOrder(id uint64) error {
 	return tx.Commit()
 }
 
+func (db *dalOrder) SelectAllStatusHistory() ([]models.StatusHistory, error) {
+	var statusHistory []models.StatusHistory
+	err := db.database.Select(&statusHistory, "SELECT * FROM order_status_history ORDER BY updated_at ASC")
+	if err != nil {
+		return nil, err
+	}
+	return statusHistory, nil
+}
+
 func (db *dalOrder) getStatus(tx *sqlx.Tx, id uint64) (string, error) {
 	var status string
 	err := tx.Get(&status, `SELECT status FROM orders WHERE id=$1`, id)
@@ -200,12 +210,32 @@ func (db *dalOrder) getStatus(tx *sqlx.Tx, id uint64) (string, error) {
 }
 
 func (db *dalOrder) inventoryRejector(tx *sqlx.Tx, orderID uint64) error {
-	_, err := tx.Exec(`UPDATE inventory AS inv
+	_, err := tx.Exec(`
+	UPDATE inventory AS inv
 	SET quantity = inv.quantity + (ings.quantity * ord.quantity)
 	FROM menu_item_ingredients AS ings
 	JOIN order_items AS ord ON ings.product_id = ord.product_id
 	WHERE inv.id = ings.inventory_id AND ord.order_id = $1`, orderID)
 	// UPDATE inventory AS inv SET quantity = inv.quantity+(i.quantity * o.quantity) FROM menu_item_ingredients AS i JOIN order_items AS o ON i.product_id = o.product_id WHERE o.order_id = 1;
+	if err != nil {
+		return err
+	}
+
+	queryTransaction := `
+	INSERT INTO inventory_transactions (inventory_id, quantity_change, reason)
+		SELECT 
+			inv.id,
+			(ings.quantity * ord.quantity) AS quantity_change,
+			'cancelled'::reason_of_inventory_transaction
+		FROM 
+			inventory inv
+		JOIN 
+			menu_item_ingredients ings ON inv.id = ings.inventory_id
+		JOIN 
+			order_items ord ON ings.product_id = ord.product_id
+		WHERE 
+			ord.order_id = $1`
+	_, err = tx.Exec(queryTransaction, orderID)
 	return err
 }
 
@@ -338,6 +368,25 @@ func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, orderID uint64, i
 			return 0, models.ErrOrderNotEnoughItems // 424
 		}
 		return 0, models.ErrNotFoundItems // 404
+	}
+
+	queryTransaction := `
+	INSERT INTO inventory_transactions (inventory_id, quantity_change, reason)
+		SELECT 
+			inv.id,
+			(ings.quantity * ord.quantity) AS quantity_change,
+			'usage'::reason_of_inventory_transaction
+		FROM 
+			inventory inv
+		JOIN 
+			menu_item_ingredients ings ON inv.id = ings.inventory_id
+		JOIN 
+			order_items ord ON ings.product_id = ord.product_id
+		WHERE 
+			ord.order_id = $1`
+	_, err = tx.Exec(queryTransaction, orderID)
+	if err != nil {
+		return 0, err
 	}
 	// егер бәрі дұрыс болса ғана жолдайды
 	if invsUpdatesOriginal != nil {

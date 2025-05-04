@@ -21,6 +21,7 @@ type menuHandInt interface {
 	DelMenu(w http.ResponseWriter, r *http.Request)
 	PostMenu(w http.ResponseWriter, r *http.Request)
 	PutMenuByID(w http.ResponseWriter, r *http.Request)
+	GetHistory(w http.ResponseWriter, r *http.Request)
 }
 
 func ReturnMenuHaldStruct(menuSerInt service.MenuServiceInter) menuHandInt {
@@ -184,4 +185,15 @@ func (handMenu *menuHandToService) PutMenuByID(w http.ResponseWriter, r *http.Re
 		return
 	}
 	writeHttp(w, http.StatusInternalServerError, "error put menu", err.Error())
+}
+
+func (handMenu *menuHandToService) GetHistory(w http.ResponseWriter, r *http.Request) {
+	history, err := handMenu.menuServInt.CollectHistory()
+	if err != nil {
+		slog.Error("menu history", "failed:", err)
+		writeHttp(w, http.StatusInternalServerError, "menu history", err.Error())
+		return
+	}
+	slog.Info("menu history success")
+	bodyJsonStruct(w, history, http.StatusOK)
 }

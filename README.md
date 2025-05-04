@@ -26,33 +26,38 @@
 
 ## Short tables
 ### API Operations for Inventory
-| #   | Method | Path            | Description                                           |
-| --- | ------ | --------------- | ----------------------------------------------------- |
-| 1   | POST   | /inventory      | Create a new inventory item.                          |
-| 2   | GET    | /inventory      | Retrieve all inventory information.                   |
-| 3   | GET    | /inventory/{id} | Retrieve information for a specific item by its ID.   |
-| 4   | PUT    | /inventory/{id} | Edit an existing inventory item by its ID.            |
-| 5   | DELETE | /inventory/{id} | Delete an inventory item. Stock will also be removed. |
+| #   | Method | Path               | Description                                           |
+| --- | ------ | ------------------ | ----------------------------------------------------- |
+| 1   | POST   | /inventory         | Create a new inventory item.                          |
+| 2   | GET    | /inventory         | Retrieve all inventory information.                   |
+| 3   | GET    | /inventory/{id}    | Retrieve information for a specific item by its ID.   |
+| 4   | PUT    | /inventory/{id}    | Edit an existing inventory item by its ID.            |
+| 5   | DELETE | /inventory/{id}    | Delete an inventory item. Stock will also be removed. |
+| 6   | GET    | /inventory/history | Retrieve all inventory transaction history.           |
 
 #### Menu Endpoints 
-| #   | Method | Path       | Description                                         |
-| --- | ------ | ---------- | --------------------------------------------------- |
-| 1   | POST   | /menu      | Add a new menu item.                                |
-| 2   | GET    | /menu      | Retrieve all menu information.                      |
-| 3   | GET    | /menu/{id} | Retrieve information for a specific item by its ID. |
-| 4   | PUT    | /menu/{id} | Edit an existing menu item by its ID.               |
-| 5   | DELETE | /menu/{id} | Delete a menu item.                                 |
+| #   | Method | Path          | Description                                         |
+| --- | ------ | ------------- | --------------------------------------------------- |
+| 1   | POST   | /menu         | Add a new menu item.                                |
+| 2   | GET    | /menu         | Retrieve all menu information.                      |
+| 3   | GET    | /menu/{id}    | Retrieve information for a specific item by its ID. |
+| 4   | PUT    | /menu/{id}    | Edit an existing menu item by its ID.               |
+| 5   | DELETE | /menu/{id}    | Delete a menu item.                                 |
+| 6   | GET    | /menu/history | Retrieve all menu price history.                    |
 
-#### Orders Endpoints 
-| Method | Path                  | Description                                          |
-| ------ | --------------------- | ---------------------------------------------------- |
-| POST   | /orders               | Add a new order.                                     |
-| GET    | /orders               | Retrieve all order information.                      |
-| GET    | /orders/{id}          | Retrieve information for a specific order by its ID. |
-| PUT    | /orders/{id}          | Edit an existing order by its ID.                    |
-| DELETE | /orders/{id}          | Delete an order.                                     |
-| POST   | /orders/{id}/close    | Close an order.                                      |
-| POST   | /orders/batch-process | Bulk Order Processing                                |
+#### Orders Endpoints
+
+| №   | Method | Path                  | Description                                          |
+| --- | ------ | --------------------- | ---------------------------------------------------- |
+| 1   | POST   | /orders               | Add a new order.                                     |
+| 2   | GET    | /orders               | Retrieve all order information.                      |
+| 3   | GET    | /orders/{id}          | Retrieve information for a specific order by its ID. |
+| 4   | PUT    | /orders/{id}          | Edit an existing order by its ID.                    |
+| 5   | DELETE | /orders/{id}          | Delete an order.                                     |
+| 6   | POST   | /orders/{id}/close    | Close an order.                                      |
+| 7   | POST   | /orders/batch-process | Bulk Order Processing                                |
+| 8   | GET    | /orders/history       | Retrieve all order status history.                   |
+
 
 #### Reports
 | Method | Path                                                                  | Description                       |
@@ -62,7 +67,6 @@
 | GET    | /reports/numberOfOrderedItems?startDate={startDate}&endDate={endDate} | Number of ordered items.          |
 | GET    | /reports/search                                                       | Full Text Search Report           |
 | GET    | /reports/orderedItemsByPeriod?period={daymonth}&month={month}         | Ordered items by period           |
-| GET    | /reports/getLeftOvers?sortBy={value}&page={page}&pageSize={pageSize}  | Get leftovers                     |
 | GET    | /reports/getLeftOvers?sortBy={value}&page={page}&pageSize={pageSize}  | Get leftovers                     |
 
 
@@ -268,3 +272,4 @@
          ```
 
 ## To be con
+

@@ -22,5 +22,6 @@ func menuRouter(db *sqlx.DB) *http.ServeMux {
 	mux.HandleFunc("DELETE /{id}", handMenu.DelMenu)
 	mux.HandleFunc("POST /", handMenu.PostMenu)
 	mux.HandleFunc("PUT /{id}", handMenu.PutMenuByID)
+	mux.HandleFunc("GET /history", handMenu.GetHistory)
 	return mux
 }
