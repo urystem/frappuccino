@@ -8,9 +8,9 @@ var (
 	ErrConflict = errors.New("conflict")  // 409 used for post ing and menu
 	// ErrContentType = errors.New("")
 
-	ErrBadInputItems       = errors.Join(ErrBadInput, errors.New("items invalid")) // 400
-	ErrNotFoundItems       = errors.New("items not found")                         // 404 //for menu ings and product items
-	ErrOrderNotEnoughItems = errors.New("items not enough")                        // 500 used for not enough invents for order
+	ErrBadInputItems       = errors.Join(ErrBadInput, errors.New("items invalid"))   // 400
+	ErrNotFoundItems       = errors.Join(ErrNotFound, errors.New("items not found")) // 404 //for menu ings and product items
+	ErrOrderNotEnoughItems = errors.New("items not enough")                          // 500 used for not enough invents for order
 	ErrOrderStatusClosed   = errors.New("order is already closed")
 	ErrOrdersMultiStatus   = errors.New("orders multi accepted")
 )

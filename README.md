@@ -1,4 +1,4 @@
-# <img src=https://media.tenor.com/Uq_-tDUQlJkAAAAi/hot-beverage-joypixels.gif height="65"/> **frappuccino**
+# <img src=https://media.tenor.com/Uq_-tDUQlJkAAAAi/hot-beverage-joypixels.gif height="65"/>  frappuccino
 
 ### Welcome to the frappuccino project — where hot ideas come to life!
 #### **Using Postman:** Send a request to `http://localhost:8080`.
@@ -23,6 +23,16 @@
 - **Order Management** – Place and close orders
 - **Reports** – Sales summaries, popular items, leftovers
 - **Tooling Support** – Easily testable via Postman or cURL
+
+## ⚙️ Requirements
+### To run the Frappuccino project, ensure the following dependencies are installed:
+
+- **Go** 1.24 or higher
+- **PostgreSQL** 15+
+- **Docker** 
+- **make** (for running development tasks)
+- **Git**
+
 
 ## Short tables
 ### API Operations for Inventory
@@ -73,7 +83,7 @@
 ## Example Usage
 ### Inventory Endpoints
 
-1. **POST /inventory**  - Creates a new inventory item.
+1. ``POST /inventory``  - Creates a new inventory item.
    - **Example Input:**
       ```json
       {
@@ -93,7 +103,7 @@
       }
       ```
 
-2. **GET /inventory**  - Fetches the list of all inventory items currently stored in the system.
+2. ``GET /inventory``  - Fetches the list of all inventory items currently stored in the system.
     - **Example Output:**
       ```json
       [
@@ -119,7 +129,7 @@
       ]
       ```
 
-3. **GET /inventory/{id}**  - Fetches details of a specific inventory item based on the provided ID.
+3. ``GET /inventory/{id}``  - Fetches details of a specific inventory item based on the provided ID.
     - **Example Output:**
       ```json
       {
@@ -132,7 +142,7 @@
          "price": 1500
       }
       ```
-4. **PUT /inventory/{id}**  - Updates an existing inventory item with new information, such as quantity or name.
+4. ``PUT /inventory/{id}``  - Updates an existing inventory item with new information, such as quantity or name.
     - **Example Input:**
       ```json
       {
@@ -152,7 +162,7 @@
       }
       ```
 
-5. **DELETE /inventory/{id}**  - Removes an inventory item from the system based on the provided ID, and decreases stock.
+5. ``DELETE /inventory/{id}``  - Removes an inventory item from the system based on the provided ID, and decreases stock.
    - **Example error output:**
       ```json
       {
@@ -161,7 +171,7 @@
       ```
 
 ### Menu Endpoints
-1. **POST /menu**  - Add a new menu item.
+1. ``POST /menu``  - Add a new menu item.
    - **Example Input:**
       ```json
       {
@@ -192,7 +202,7 @@
          "message": "success : menu created:"
       }
       ```
-2. **GET /menu**  - Retrieve all menu information.
+2. ``GET /menu``  - Retrieve all menu information.
    - **Example Output:**
       ```json
       [
@@ -215,7 +225,7 @@
          ///
       ]
       ```
-3. **GET /menu/{id}**  - Retrieve information for a specific item by its ID.
+3. ``GET /menu/{id}``  - Retrieve information for a specific item by its ID.
    - **Example Output:**
       ```json
       {
@@ -236,7 +246,7 @@
          ]
       }
       ```
-4. **PUT /menu/{id}**  - Edit an existing menu item by its ID.
+4. ``PUT /menu/{id}``  - Edit an existing menu item by its ID.
    - **Example Output:**
       ```json
       {
@@ -263,7 +273,7 @@
       }
       ```
 
-5. **DELETE /menu/{id}**  - Delete a menu item.
+5. ``DELETE /menu/{id}``  - **Delete a menu item.**
       - **Example error Output:**
          ```json
          {
@@ -271,5 +281,28 @@
          }
          ```
 
-## To be con
+## Order Endpoints
+1. ``POST /orders``  - **Add a new order.**
+   - **Example Input:**
+      ```json
+      {
+         "customer_name": "Mike",
+         "allergens": [
+               "dairy"
+         ],
+         "items": [
+               {
+                  "product_id": 2,
+                  "quantity": 1
+               }
+         ]
+      }
+     ```
+
+   - **Example Output:**
+      ```json
+      {
+         "message": "succes : order created by : Mike"
+      }
+      ```
 

@@ -34,8 +34,11 @@ func main() {
 
 	routes := router.Allrouter(db)
 
-	log.Fatal(http.ListenAndServe(":8080", routes))
+	log.Fatal(http.ListenAndServe(":"+os.Getenv("APP_HOST_PORT"), routes))
 }
+
+// fmt.Fprintln(os.Stderr, "ERROR: invalid app host port")
+// os.Stderr.WriteString("ERROR: invalid app host port")
 
 // func GetMenuItems(db *sqlx.DB) ([]MenuItem, error) {
 // 	query := `SELECT id, name, description, tags, allergens, price FROM menu_items`
