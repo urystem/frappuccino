@@ -1,8 +1,8 @@
 # <img src=https://media.tenor.com/Uq_-tDUQlJkAAAAi/hot-beverage-joypixels.gif height="65"/>  frappuccino
 
 ### Welcome to the frappuccino project — where hot ideas come to life!
-#### **Using Postman:** Send a request to `http://localhost:8080`.
 #### Clone the repository:
+
 ```bash
    git clone git@git.platform.alem.school:ukabdoll/frappuccino.git
 ```
@@ -33,6 +33,33 @@
 - **make** (for running development tasks)
 - **Git**
 
+## 📁 Directory structure
+```
+frappuccino/
+├── cmd/                  # Entrypoints (main.go)
+├── internal/             # Application logic (not exposed as public API)
+│   ├── handler/          # HTTP handlers (Gin controllers)
+│   ├── service/          # Business logic layer
+│   ├── repository/       # Data access layer (PostgreSQL/sqlx)
+|   └── routes/           # Route definitions and grouping
+├── migrations/           # SQL migration files
+└── model/                # Data models and DTOs
+├── .env                  # Docker Compose services
+├── docker-compose.yml    # Docker Compose services
+├── Dockerfile            # Docker container setup
+├── Makefile              # Task automation
+├── go.mod                # Go module file
+├── go.sum                # Go checksums
+└── README.md             # Project documentation
+```
+
+- #### [`cmd/`](cmd/) – Entrypoint (main.go)
+- #### [`internal/`](internal/) – Application logic
+  - ##### [`handler/`](internal/handler/) – HTTP handlers
+  - ##### [`service/`](internal/service/) – Business logic
+  - ##### [`dal/`](internal/dal/) – DB access
+  - ##### [`routes/`](internal/routes/) – Route definitions
+- ##### [`migrations/`](migrations/) – SQL migration files
 
 ## Short tables
 ### API Operations for Inventory
