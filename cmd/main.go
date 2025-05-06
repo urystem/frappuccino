@@ -34,7 +34,7 @@ func main() {
 
 	routes := router.Allrouter(db)
 
-	log.Fatal(http.ListenAndServe(":"+os.Getenv("APP_HOST_PORT"), routes))
+	log.Fatal(http.ListenAndServe(":8080", routes))
 }
 
 // fmt.Fprintln(os.Stderr, "ERROR: invalid app host port")

@@ -1,13 +1,19 @@
 # <img src=https://media.tenor.com/Uq_-tDUQlJkAAAAi/hot-beverage-joypixels.gif height="65"/>  frappuccino
 
 ### Welcome to the frappuccino project — where hot ideas come to life!
-#### Clone the repository:
 
-```bash
-   git clone git@git.platform.alem.school:ukabdoll/frappuccino.git
-```
 
-## About frappuccino
+
+## Table of contents
+- #### [Introduction](#Introduction)
+- #### [Features](#Features)
+- #### [Requirements](#Requirements)
+- #### [Directory structure](#Directory-structure)
+- #### [Short-tables](#Short-tables)
+- #### [Examples](#example-usage)
+
+
+## Introduction
 
 #### frappuccino is a coffee shop management system designed to help manage inventory, menu items, and customer orders through a RESTful API. This project is built with Go and aims to streamline the daily operations of a coffee shop.
 
@@ -15,7 +21,6 @@
 #### **Menu Management:** - Functions related to adding and editing menu items.
 #### **Order Management:** - All functions related to handling orders.
 #### **Support for cURL and Postman:** - Testing using popular tools.
-
 ## 🔧 Features
 
 - **Inventory Management** – Add, edit, and remove stock
