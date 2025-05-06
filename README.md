@@ -1,24 +1,37 @@
 # <img src=https://media.tenor.com/Uq_-tDUQlJkAAAAi/hot-beverage-joypixels.gif height="65"/>  frappuccino
+<!-- ![Frappuccino Logo](https://media.tenor.com/Uq_-tDUQlJkAAAAi/hot-beverage-joypixels.gif) -->
 
 ### Welcome to the frappuccino project — where hot ideas come to life!
 
 ## Table of contents
-- #### [Introduction](#introduction)
-- #### [Features](#features)
-- #### [Requirements](#requirements)
-- #### [Directory structure](#directory-structure)
-- #### [Short-tables](#short-tables)
-- #### [Examples](#example-usage)
+- [  frappuccino](#--frappuccino)
+    - [Welcome to the frappuccino project — where hot ideas come to life!](#welcome-to-the-frappuccino-project--where-hot-ideas-come-to-life)
+  - [Table of contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [🔧 Features](#-features)
+  - [⚙️ Requirements](#️-requirements)
+    - [To run the Frappuccino project, ensure the following dependencies are installed:](#to-run-the-frappuccino-project-ensure-the-following-dependencies-are-installed)
+  - [📁 Directory structure](#-directory-structure)
+  - [Short tables](#short-tables)
+    - [API Operations for inventory](#api-operations-for-inventory)
+      - [API Operations for menu](#api-operations-for-menu)
+      - [API Operations for order](#api-operations-for-order)
+      - [API Operations for report](#api-operations-for-report)
+  - [Example Usage](#example-usage)
+    - [Inventory Endpoints](#inventory-endpoints)
+    - [Menu Endpoints](#menu-endpoints)
+  - [Order Endpoints](#order-endpoints)
+
 
 
 ## Introduction
 
-#### frappuccino is a coffee shop management system designed to help manage inventory, menu items, and customer orders through a RESTful API. This project is built with Go and aims to streamline the daily operations of a coffee shop.
+`frappuccino` is a coffee shop management system designed to help manage inventory, menu items, and customer orders through a RESTful API. This project is built with Go and aims to streamline the daily operations of a coffee shop.
 
-#### **Inventory Management:** - Describes actions that can be performed with inventory items.
-#### **Menu Management:** - Functions related to adding and editing menu items.
-#### **Order Management:** - All functions related to handling orders.
-#### **Support for cURL and Postman:** - Testing using popular tools.
+**Inventory Management:** - Describes actions that can be performed with inventory items.
+**Menu Management:** - Functions related to adding and editing menu items.
+**Order Management:** - All functions related to handling orders.
+**Support for cURL and Postman:** - Testing using popular tools.
 ## 🔧 Features
 
 - **Inventory Management** – Add, edit, and remove stock
@@ -65,7 +78,7 @@ frappuccino/
 - ##### [`migrations/`](migrations/) – SQL migration files
 
 ## Short tables
-### API Operations for Inventory
+### API Operations for inventory
 | #   | Method | Path               | Description                                           |
 | --- | ------ | ------------------ | ----------------------------------------------------- |
 | 1   | POST   | /inventory         | Create a new inventory item.                          |
@@ -75,7 +88,7 @@ frappuccino/
 | 5   | DELETE | /inventory/{id}    | Delete an inventory item. Stock will also be removed. |
 | 6   | GET    | /inventory/history | Retrieve all inventory transaction history.           |
 
-#### Menu Endpoints 
+#### API Operations for menu
 | #   | Method | Path          | Description                                         |
 | --- | ------ | ------------- | --------------------------------------------------- |
 | 1   | POST   | /menu         | Add a new menu item.                                |
@@ -85,7 +98,7 @@ frappuccino/
 | 5   | DELETE | /menu/{id}    | Delete a menu item.                                 |
 | 6   | GET    | /menu/history | Retrieve all menu price history.                    |
 
-#### Orders Endpoints
+#### API Operations for order
 
 | №   | Method | Path                  | Description                                          |
 | --- | ------ | --------------------- | ---------------------------------------------------- |
@@ -99,7 +112,7 @@ frappuccino/
 | 8   | GET    | /orders/history       | Retrieve all order status history.                   |
 
 
-#### Reports
+#### API Operations for report
 | Method | Path                                                                  | Description                       |
 | ------ | --------------------------------------------------------------------- | --------------------------------- |
 | GET    | /reports/total-sales                                                  | Get the total sales amount.       |
@@ -112,7 +125,6 @@ frappuccino/
 
 ## Example Usage
 ### Inventory Endpoints
-
 1. ``POST /inventory``  - Creates a new inventory item.
    - **Example Input:**
       ```json
@@ -132,7 +144,6 @@ frappuccino/
        "message": "inventory: created"
       }
       ```
-
 2. ``GET /inventory``  - Fetches the list of all inventory items currently stored in the system.
     - **Example Output:**
       ```json
@@ -158,7 +169,6 @@ frappuccino/
       ///
       ]
       ```
-
 3. ``GET /inventory/{id}``  - Fetches details of a specific inventory item based on the provided ID.
     - **Example Output:**
       ```json
@@ -191,7 +201,6 @@ frappuccino/
          "message": "updated : 1"
       }
       ```
-
 5. ``DELETE /inventory/{id}``  - Removes an inventory item from the system based on the provided ID, and decreases stock.
    - **Example error output:**
       ```json
@@ -335,4 +344,4 @@ frappuccino/
          "message": "succes : order created by : Mike"
       }
       ```
-
+---
