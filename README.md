@@ -1,26 +1,25 @@
 # <img src=https://media.tenor.com/Uq_-tDUQlJkAAAAi/hot-beverage-joypixels.gif height="65"/>  frappuccino
 <!-- ![Frappuccino Logo](https://media.tenor.com/Uq_-tDUQlJkAAAAi/hot-beverage-joypixels.gif) -->
 
-### Welcome to the frappuccino project — where hot ideas come to life!
+Welcome to the frappuccino project — where hot ideas come to life!
 
 ## Table of contents
 - [  frappuccino](#--frappuccino)
-    - [Welcome to the frappuccino project — where hot ideas come to life!](#welcome-to-the-frappuccino-project--where-hot-ideas-come-to-life)
   - [Table of contents](#table-of-contents)
   - [Introduction](#introduction)
   - [🔧 Features](#-features)
   - [⚙️ Requirements](#️-requirements)
-    - [To run the Frappuccino project, ensure the following dependencies are installed:](#to-run-the-frappuccino-project-ensure-the-following-dependencies-are-installed)
   - [📁 Directory structure](#-directory-structure)
   - [Short tables](#short-tables)
     - [API Operations for inventory](#api-operations-for-inventory)
-      - [API Operations for menu](#api-operations-for-menu)
-      - [API Operations for order](#api-operations-for-order)
-      - [API Operations for report](#api-operations-for-report)
+    - [API Operations for menu](#api-operations-for-menu)
+    - [API Operations for order](#api-operations-for-order)
+    - [API Operations for report](#api-operations-for-report)
   - [Example Usage](#example-usage)
     - [Inventory Endpoints](#inventory-endpoints)
     - [Menu Endpoints](#menu-endpoints)
-  - [Order Endpoints](#order-endpoints)
+    - [Order Endpoints](#order-endpoints)
+
 
 
 
@@ -41,7 +40,7 @@
 - **Tooling Support** – Easily testable via Postman or cURL
 
 ## ⚙️ Requirements
-### To run the Frappuccino project, ensure the following dependencies are installed:
+   To run the Frappuccino project, ensure the following dependencies are installed:
 
 - **Go** 1.24 or higher
 - **PostgreSQL** 15+
@@ -88,7 +87,7 @@ frappuccino/
 | 5   | DELETE | /inventory/{id}    | Delete an inventory item. Stock will also be removed. |
 | 6   | GET    | /inventory/history | Retrieve all inventory transaction history.           |
 
-#### API Operations for menu
+### API Operations for menu
 | #   | Method | Path          | Description                                         |
 | --- | ------ | ------------- | --------------------------------------------------- |
 | 1   | POST   | /menu         | Add a new menu item.                                |
@@ -98,7 +97,7 @@ frappuccino/
 | 5   | DELETE | /menu/{id}    | Delete a menu item.                                 |
 | 6   | GET    | /menu/history | Retrieve all menu price history.                    |
 
-#### API Operations for order
+### API Operations for order
 
 | №   | Method | Path                  | Description                                          |
 | --- | ------ | --------------------- | ---------------------------------------------------- |
@@ -112,7 +111,7 @@ frappuccino/
 | 8   | GET    | /orders/history       | Retrieve all order status history.                   |
 
 
-#### API Operations for report
+### API Operations for report
 | Method | Path                                                                  | Description                       |
 | ------ | --------------------------------------------------------------------- | --------------------------------- |
 | GET    | /reports/total-sales                                                  | Get the total sales amount.       |
@@ -320,7 +319,7 @@ frappuccino/
          }
          ```
 
-## Order Endpoints
+### Order Endpoints
 1. ``POST /orders``  - **Add a new order.**
    - **Example Input:**
       ```json
