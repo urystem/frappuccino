@@ -2,14 +2,12 @@
 
 ### Welcome to the frappuccino project — where hot ideas come to life!
 
-
-
 ## Table of contents
-- #### [Introduction](#Introduction)
-- #### [Features](#Features)
-- #### [Requirements](#Requirements)
-- #### [Directory structure](#Directory-structure)
-- #### [Short-tables](#Short-tables)
+- #### [Introduction](#introduction)
+- #### [Features](#features)
+- #### [Requirements](#requirements)
+- #### [Directory structure](#directory-structure)
+- #### [Short-tables](#short-tables)
 - #### [Examples](#example-usage)
 
 
