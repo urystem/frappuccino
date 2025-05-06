@@ -25,7 +25,7 @@ services:
       - ./migrations/2_menu.sql:/docker-entrypoint-initdb.d/2_menu.sql
       - ./migrations/3_order.sql:/docker-entrypoint-initdb.d/3_order.sql
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U latte -d frappuccino" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
       # test: [ "CMD-SHELL", "pg_isready -h someremotehost" ]
       # test: [ "CMD-SHELL", "pg_isready -h someremotehost -p 5432 -U latte -d frappuccino"]
       interval: 3s
