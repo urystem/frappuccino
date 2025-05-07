@@ -203,7 +203,7 @@ func (core *dalInv) DeleteInventory(id uint64) (*models.InventoryDepend, error) 
 
 	var menuDepend models.InventoryDepend
 
-	menusNames := `SELECT id, name
+	const menusNames string = `SELECT id, name
 		FROM menu_items
 		JOIN menu_item_ingredients ON id=product_id
 		WHERE inventory_id=$1`

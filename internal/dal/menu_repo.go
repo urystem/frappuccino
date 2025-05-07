@@ -90,7 +90,7 @@ func (core *dalMenu) DeleteMenu(id uint64) (*models.MenuDepend, error) {
 	}
 	defer tx.Rollback()
 
-	query := `
+	const query string = `
 	SELECT id, customer_name 
 		FROM order_items 
 		JOIN orders ON order_id=id 
@@ -135,7 +135,7 @@ func (core *dalMenu) InsertMenu(menuItems *models.MenuItem) error {
 		return err
 	}
 
-	insertMenuQ := `
+	const insertMenuQ string = `
 		INSERT INTO menu_items (name, description, tags, allergens, price)
 		VALUES ($1, $2, $3, $4, $5)
 	RETURNING id`
@@ -174,7 +174,7 @@ func (core *dalMenu) UpdateMenu(menuItems *models.MenuItem) error {
 		return err
 	}
 
-	updateMenuQ := `
+	const updateMenuQ string = `
 	UPDATE menu_items 
 		SET name=:name, description = :description, 
 			tags = :tags, allergens = :allergens, price = :price
@@ -247,7 +247,7 @@ func (core *dalMenu) checkIngs(tx *sqlx.Tx, ings *[]models.MenuIngredients) erro
 }
 
 func (core *dalMenu) insertToMenuIngs(tx *sqlx.Tx, menuID uint64, ings []models.MenuIngredients) error {
-	insert1MenuIngQ := `
+	const insert1MenuIngQ string = `
 		INSERT INTO menu_item_ingredients
 		VALUES(:product_id, :inventory_id, :quantity)`
 

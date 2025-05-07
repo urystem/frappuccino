@@ -29,7 +29,7 @@ func ReturnDulAggregationDB(db *sqlx.DB) AggregationDalInter {
 }
 
 func (db *dalAggregation) AmountSales() (float64, error) {
-	sumTotal := `
+	const sumTotal string = `
 	SELECT SUM(total)
 	FROM orders
 	WHERE status = 'accepted'`
@@ -38,7 +38,7 @@ func (db *dalAggregation) AmountSales() (float64, error) {
 }
 
 func (db *dalAggregation) Popularies() (*models.PopularItems, error) {
-	popularsQ := `
+	const popularsQ string = `
 		SELECT oi.product_id, m.name, SUM(oi.quantity) AS sum
 			FROM order_items AS oi
 			JOIN menu_items AS m ON m.id = oi.product_id
@@ -53,7 +53,7 @@ func (db *dalAggregation) Popularies() (*models.PopularItems, error) {
 }
 
 func (db *dalAggregation) CountOfOrderedItems(start, end *time.Time) (map[string]uint64, error) {
-	countItemsQ2 := `
+	const countItemsQ2 string = `
 		SELECT m.name, SUM(oi.quantity) AS sum
 			FROM order_items AS oi
 			JOIN menu_items AS m ON m.id = oi.product_id
@@ -88,7 +88,7 @@ func (db *dalAggregation) CountOfOrderedItems(start, end *time.Time) (map[string
 }
 
 func (db *dalAggregation) SearchByWordInventory(find string, minPrice, maxPrice float64, strc *models.SearchThings) error {
-	query := `
+	const query string = `
 	WITH ranked_inventory AS (
     	SELECT
         	id, name, description, quantity,
@@ -105,12 +105,12 @@ func (db *dalAggregation) SearchByWordInventory(find string, minPrice, maxPrice 
 	FROM ranked_inventory
 	WHERE relevance > 0.009
 	ORDER BY relevance DESC`
-	
+
 	return db.database.Select(&strc.Inventories, query, find, minPrice, maxPrice)
 }
 
 func (db *dalAggregation) SearchByWordMenu(find string, minPrice, maxPrice float64, strc *models.SearchThings) error {
-	query := `
+	const query string = `
 	WITH ranked_menu AS(
 		SELECT
 			m.id,
@@ -143,7 +143,7 @@ func (db *dalAggregation) SearchByWordMenu(find string, minPrice, maxPrice float
 }
 
 func (db *dalAggregation) SearchByWordOrder(find string, minPrice, maxPrice float64, strc *models.SearchThings) error {
-	query := `
+	const query string = `
 	WITH ranked_order AS(
 		SELECT 
 			o.id,
@@ -174,7 +174,7 @@ func (db *dalAggregation) SearchByWordOrder(find string, minPrice, maxPrice floa
 }
 
 func (db *dalAggregation) PeriodMonth(month time.Month) ([]map[string]uint64, error) {
-	query := `
+	const query string = `
 		SELECT
 			EXTRACT(DAY FROM created_at) AS day,
 	        COUNT(*) AS total_orders
@@ -193,7 +193,7 @@ func (db *dalAggregation) PeriodMonth(month time.Month) ([]map[string]uint64, er
 }
 
 func (db *dalAggregation) PeriodYear(year int) ([]map[string]uint64, error) {
-	query := `
+	const query string = `
 	SELECT 
 		TO_CHAR(created_at, 'FMMonth') AS month,
 		COUNT(*) AS total_orders
@@ -243,7 +243,7 @@ func (db *dalAggregation) GetLeftOversRepo(over *models.GetLeftOvers) error {
 		return err
 	}
 
-	query := `
+	const query string = `
 		SELECT 
 			id, name, quantity, price
 		FROM inventory

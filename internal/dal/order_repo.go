@@ -117,8 +117,7 @@ func (db *dalOrder) InsertOrder(ord *models.Order, invUpdates *[]models.Inventor
 	RETURNING id`, ord.CustomerName, ord.Allergens).Scan(&ord.ID); err != nil {
 		return err
 	}
-	ord.Total = new(float64)
-	*ord.Total, err = db.detectorAndInserterOrderItems(tx, ord.ID, ord.Items, invUpdates)
+	err = db.detectorAndInserterOrderItems(tx, ord, invUpdates)
 	if err != nil {
 		return err
 	}
@@ -149,12 +148,12 @@ func (db *dalOrder) UpdateOrder(ord *models.Order) error {
 	if err != nil {
 		return err
 	}
-	ord.Total = new(float64)
-	*ord.Total, err = db.detectorAndInserterOrderItems(tx, ord.ID, ord.Items, nil)
+	err = db.detectorAndInserterOrderItems(tx, ord, nil)
 	if err != nil {
 		return err
 	}
-	_, err = tx.NamedExec(`UPDATE orders 
+	_, err = tx.NamedExec(`
+	UPDATE orders 
 		SET 
 			customer_name = :customer_name, 
 			allergens = :allergens,
@@ -221,7 +220,7 @@ func (db *dalOrder) inventoryRejector(tx *sqlx.Tx, orderID uint64) error {
 		return err
 	}
 
-	queryTransaction := `
+	const queryTransaction string = `
 	INSERT INTO inventory_transactions (inventory_id, quantity_change, reason)
 		SELECT 
 			inv.id,
@@ -255,14 +254,14 @@ func (db *dalOrder) mergerInv(in []models.InventoryUpdate, out *[]models.Invento
 	}
 }
 
-func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, orderID uint64, items []models.OrderItem, invsUpdatesOriginal *[]models.InventoryUpdate) (float64, error) {
+func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, ord *models.Order, invsUpdatesOriginal *[]models.InventoryUpdate) error {
 	stmt, err := tx.Preparex(`SELECT TRUE FROM menu_items WHERE id = $1`)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	defer stmt.Close()
 
-	notEnoughInventsQ := `
+	const notEnoughInventsQ string = `
 	SELECT id, name, ABS(garbage) AS not_enough
 		FROM (
   			SELECT 
@@ -281,17 +280,17 @@ func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, orderID uint64, i
 	// SELECT id AS inventory_id, ABS(garbage) AS not_enough FROM (SELECT inv.id, inv.quantity - ings.quantity * $2 AS garbage FROM inventory inv JOIN menu_item_ingredients ings ON inv.id = ings.inventory_id WHERE ings.product_id = $1) sub WHERE garbage < 0;
 	stmt2, err := tx.Preparex(notEnoughInventsQ)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	defer stmt2.Close()
 
 	stmt3, err := tx.Prepare(`INSERT INTO order_items VALUES($1, $2, $3)`)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	defer stmt3.Close()
 
-	remaining := `
+	const remaining string = `
 	SELECT 
 		inv.id,
 		inv.name,
@@ -306,12 +305,12 @@ func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, orderID uint64, i
 
 	stmt4, err := tx.Preparex(remaining)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	defer stmt4.Close()
 
 	// minus inventory
-	minusInvCycle := `
+	const minusInvCycle string = `
 	UPDATE inventory AS inv
 	SET quantity = inv.quantity - (mi.quantity * $2)
 	FROM menu_item_ingredients AS mi
@@ -321,36 +320,36 @@ func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, orderID uint64, i
 
 	stmt5, err := tx.Prepare(minusInvCycle)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	defer stmt5.Close()
 
 	var wasError, wasNotEnough bool
 	var invsTemp []models.InventoryUpdate
-	for i, item := range items {
+	for i, item := range ord.Items {
 		var hasInMenu, notEnough bool
 		if err = stmt.Get(&hasInMenu, item.ProductID); err != nil {
-			return 0, err
-		} else if items[i].NotEnoungIngs = nil; !hasInMenu {
-			items[i].Warning = "not found in menu"
+			return err
+		} else if ord.Items[i].NotEnoungIngs = nil; !hasInMenu {
+			ord.Items[i].Warning = "not found in menu"
 			wasError = true
-		} else if err = stmt2.Select(&items[i].NotEnoungIngs, item.ProductID, item.Quantity); err != nil {
-			return 0, err
-		} else if len(items[i].NotEnoungIngs) != 0 {
-			items[i].Warning = "not enough in inventory"
+		} else if err = stmt2.Select(&ord.Items[i].NotEnoungIngs, item.ProductID, item.Quantity); err != nil {
+			return err
+		} else if len(ord.Items[i].NotEnoungIngs) != 0 {
+			ord.Items[i].Warning = "not enough in inventory"
 			wasError = true
 			notEnough = true
 			wasNotEnough = true
 		} else if !wasError { // insert to order_items
-			_, err = stmt3.Exec(orderID, item.ProductID, item.Quantity)
+			_, err = stmt3.Exec(ord.ID, item.ProductID, item.Quantity)
 			if err != nil {
-				return 0, err
+				return err
 			} else if invsUpdatesOriginal != nil {
 				// 1 ингридентті 1 тапсырыста 2 меню сол 1еуін қолдануы мүмкін сол үшін керек
 				var invsTempTemp []models.InventoryUpdate
 				err = stmt4.Select(&invsTempTemp, item.ProductID, item.Quantity)
 				if err != nil {
-					return 0, err
+					return err
 				}
 				db.mergerInv(invsTempTemp, &invsTemp)
 			}
@@ -359,18 +358,18 @@ func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, orderID uint64, i
 		if hasInMenu && !notEnough {
 			_, err = stmt5.Exec(item.ProductID, item.Quantity)
 			if err != nil {
-				return 0, err
+				return err
 			}
 		}
 	}
 	if wasError {
 		if wasNotEnough {
-			return 0, models.ErrOrderNotEnoughItems // 424
+			return models.ErrOrderNotEnoughItems // 424
 		}
-		return 0, models.ErrNotFoundItems // 404
+		return models.ErrNotFoundItems // 404
 	}
 
-	queryTransaction := `
+	const queryTransaction string = `
 	INSERT INTO inventory_transactions (inventory_id, quantity_change, reason)
 		SELECT 
 			inv.id,
@@ -384,32 +383,32 @@ func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, orderID uint64, i
 			order_items ord ON ings.product_id = ord.product_id
 		WHERE 
 			ord.order_id = $1`
-	_, err = tx.Exec(queryTransaction, orderID)
+	_, err = tx.Exec(queryTransaction, ord.ID)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	// егер бәрі дұрыс болса ғана жолдайды
 	if invsUpdatesOriginal != nil {
 		db.mergerInv(invsTemp, invsUpdatesOriginal)
 	}
-	totalQ := `
+	const totalQ string = `
 	SELECT SUM(m.price * o.quantity)
 	FROM menu_items AS m
 	JOIN order_items AS o ON m.id = o.product_id
 	WHERE o.order_id = $1`
 
-	var total float64
-	err = tx.Get(&total, totalQ, orderID)
+	ord.Total = new(float64)
+	err = tx.Get(ord.Total, totalQ, ord.ID)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
-	orderUpdateTotal := `
+	const orderUpdateTotal string = `
 	UPDATE orders
 	SET total = $1
 	WHERE id = $2`
-	_, err = tx.Exec(orderUpdateTotal, total, orderID)
-	return total, err
+	_, err = tx.Exec(orderUpdateTotal, *ord.Total, ord.ID)
+	return err
 }
 
 // SELECT inv.id, inv.quantity-(ings.quantity * $1) AS notEnough FROM inventory AS inv JOIN menu_item_ingredients AS ings ON inv.id=ings.inventory_id WHERE ings.product_id = $2 AND inv.quantity-(ings.quantity * $1)<0;
