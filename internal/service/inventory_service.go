@@ -19,6 +19,7 @@ type InventoryService interface {
 	UpgradeInventory(*models.Inventory) error
 	RemoveInventory(uint64) (*models.InventoryDepend, error)
 	CollectInventoryHistory() ([]models.InventoryTransaction, error)
+	CollectReorder() ([]models.Inventory, error)
 }
 
 func ReturnInventorySerInt(dalInter dal.InventoryDataAccess) InventoryService {
@@ -88,4 +89,8 @@ func (ser *inventoryServiceDal) checkInventStruct(inv *models.Inventory) error {
 
 func (ser *inventoryServiceDal) CollectInventoryHistory() ([]models.InventoryTransaction, error) {
 	return ser.invDal.SelectAllInventoryTransaction()
+}
+
+func (ser *inventoryServiceDal) CollectReorder() ([]models.Inventory, error) {
+	return ser.invDal.SelectReorder()
 }

@@ -22,6 +22,7 @@ type inventoryHandlerInt interface {
 	PutInventory(w http.ResponseWriter, r *http.Request)
 	DeleteInventory(w http.ResponseWriter, r *http.Request)
 	GetInventoryHistory(w http.ResponseWriter, r *http.Request)
+	GetReorderInventories(w http.ResponseWriter, r *http.Request)
 }
 
 func NewInventoryHandler(service service.InventoryService) inventoryHandlerInt {
@@ -176,4 +177,16 @@ func (handl *inventoryHandler) GetInventoryHistory(w http.ResponseWriter, r *htt
 	}
 	slog.Info("Invent history succes")
 	bodyJsonStruct(w, invHis, http.StatusOK)
+}
+
+func (handl *inventoryHandler) GetReorderInventories(w http.ResponseWriter, r *http.Request) {
+	invents, err := handl.invSrv.CollectReorder()
+	if err != nil {
+		slog.Error("Can't get reorder inventory")
+		writeHttp(w, http.StatusInternalServerError, "get reorder invents", err.Error())
+		return
+	}
+
+	bodyJsonStruct(w, invents, http.StatusOK)
+	slog.Info("Get", "reorder inventories:", "succes")
 }

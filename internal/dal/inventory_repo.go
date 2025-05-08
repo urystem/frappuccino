@@ -25,6 +25,7 @@ type InventoryDataAccess interface {
 	UpdateInventory(*models.Inventory) error
 	DeleteInventory(uint64) (*models.InventoryDepend, error)
 	SelectAllInventoryTransaction() ([]models.InventoryTransaction, error)
+	SelectReorder() ([]models.Inventory, error)
 }
 
 func ReturnDalInvCore(db *sqlx.DB) InventoryDataAccess {
@@ -140,8 +141,7 @@ func (core *dalInv) InsertInventoryV6(inv *models.Inventory) error {
 
 func (core *dalInv) SelectAllInventories() ([]models.Inventory, error) {
 	var invts []models.Inventory
-	err := core.db.Select(&invts, "SELECT * FROM inventory")
-	return invts, err
+	return invts, core.db.Select(&invts, "SELECT * FROM inventory")
 }
 
 func (core *dalInv) SelectInventory(id uint64) (*models.Inventory, error) {
@@ -239,4 +239,9 @@ func (core *dalInv) SelectAllInventoryTransaction() ([]models.InventoryTransacti
 		return nil, err
 	}
 	return inventoryTransactions, nil
+}
+
+func (core *dalInv) SelectReorder() ([]models.Inventory, error) {
+	var invs []models.Inventory
+	return invs, core.db.Select(&invs, `SELECT * FROM inventory WHERE quantity <= reorder_level`)
 }
