@@ -86,6 +86,7 @@ frappuccino/
 | 4   | PUT    | /inventory/{id}    | Edit an existing inventory item by its ID.            |
 | 5   | DELETE | /inventory/{id}    | Delete an inventory item. Stock will also be removed. |
 | 6   | GET    | /inventory/history | Retrieve all inventory transaction history.           |
+| 7   | GET    | /inventory/reorder | Receiving Reordered Inventory                         |
 
 ### API Operations for menu
 | #   | Method | Path          | Description                                         |
