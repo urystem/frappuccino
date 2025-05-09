@@ -129,6 +129,8 @@ func (ser *ordServiceToDal) checkOrderStruct(ord *models.Order) error {
 	var hasZeroQuantity bool
 	for i, item := range ord.Items {
 		ord.Items[i].Warning = ""
+		ord.Items[i].Allergens = nil
+		ord.Items[i].NotEnoungIngs = nil
 		if item.Quantity == 0 {
 			ord.Items[i].Warning = "zero quantity"
 			hasZeroQuantity = true

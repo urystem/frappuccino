@@ -3,10 +3,12 @@ package dal
 import (
 	"database/sql"
 	"errors"
+	"slices"
 
 	"frappuccino/models"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 type dalOrder struct {
@@ -200,7 +202,7 @@ func (db *dalOrder) SelectAllStatusHistory() ([]models.StatusHistory, error) {
 func (db *dalOrder) getStatus(tx *sqlx.Tx, id uint64) (string, error) {
 	var status string
 	err := tx.Get(&status, `SELECT status FROM orders WHERE id=$1`, id)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return "", models.ErrNotFound
 	} else if err != nil {
 		return "", err
@@ -254,13 +256,26 @@ func (db *dalOrder) mergerInv(in []models.InventoryUpdate, out *[]models.Invento
 	}
 }
 
+func (db *dalOrder) checkAllergens(orderAller pq.StringArray, menuAller *pq.StringArray) {
+	var invalids uint64
+	for _, menuAll := range *menuAller {
+		if slices.Contains(orderAller, menuAll) {
+			(*menuAller)[invalids] = menuAll
+			invalids++
+		}
+	}
+	*menuAller = (*menuAller)[:invalids]
+}
+
 func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, ord *models.Order, invsUpdatesOriginal *[]models.InventoryUpdate) error {
-	stmt, err := tx.Preparex(`SELECT TRUE FROM menu_items WHERE id = $1`)
+	// проверяет существует ли в меню через select allergens
+	stmt, err := tx.Preparex(`SELECT allergens FROM menu_items WHERE id = $1`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
+	// проверяет достаточно ли ингридентов
 	const notEnoughInventsQ string = `
 	SELECT id, name, ABS(garbage) AS not_enough
 		FROM (
@@ -278,18 +293,21 @@ func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, ord *models.Order
 	WHERE 
 		garbage < 0`
 	// SELECT id AS inventory_id, ABS(garbage) AS not_enough FROM (SELECT inv.id, inv.quantity - ings.quantity * $2 AS garbage FROM inventory inv JOIN menu_item_ingredients ings ON inv.id = ings.inventory_id WHERE ings.product_id = $1) sub WHERE garbage < 0;
+
 	stmt2, err := tx.Preparex(notEnoughInventsQ)
 	if err != nil {
 		return err
 	}
 	defer stmt2.Close()
 
+	// ВСтавляет запись на order_items (Если до этого все items существует и ингридиенты достаточно)
 	stmt3, err := tx.Prepare(`INSERT INTO order_items VALUES($1, $2, $3)`)
 	if err != nil {
 		return err
 	}
 	defer stmt3.Close()
 
+	// получить отчеть ингридиентов на каждый меню items
 	const remaining string = `
 	SELECT 
 		inv.id,
@@ -309,7 +327,7 @@ func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, ord *models.Order
 	}
 	defer stmt4.Close()
 
-	// minus inventory
+	// minus inventory for every menu item
 	const minusInvCycle string = `
 	UPDATE inventory AS inv
 	SET quantity = inv.quantity - (mi.quantity * $2)
@@ -324,22 +342,28 @@ func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, ord *models.Order
 	}
 	defer stmt5.Close()
 
-	var wasError, wasNotEnough bool
+	var wasError, notFound, foundAllergen bool
 	var invsTemp []models.InventoryUpdate
 	for i, item := range ord.Items {
 		var hasInMenu, notEnough bool
-		if err = stmt.Get(&hasInMenu, item.ProductID); err != nil {
-			return err
-		} else if ord.Items[i].NotEnoungIngs = nil; !hasInMenu {
-			ord.Items[i].Warning = "not found in menu"
+		if err = stmt.Get(&ord.Items[i].Allergens, item.ProductID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				ord.Items[i].Warning = "not found in menu"
+				wasError = true
+				notFound = true
+			} else {
+				return err
+			}
+		} else if db.checkAllergens(ord.Allergens, &ord.Items[i].Allergens); len(ord.Items[i].Allergens) != 0 {
+			ord.Items[i].Warning = "found allergen"
 			wasError = true
+			foundAllergen = true
 		} else if err = stmt2.Select(&ord.Items[i].NotEnoungIngs, item.ProductID, item.Quantity); err != nil {
 			return err
 		} else if len(ord.Items[i].NotEnoungIngs) != 0 {
 			ord.Items[i].Warning = "not enough in inventory"
 			wasError = true
 			notEnough = true
-			wasNotEnough = true
 		} else if !wasError { // insert to order_items
 			_, err = stmt3.Exec(ord.ID, item.ProductID, item.Quantity)
 			if err != nil {
@@ -362,11 +386,14 @@ func (db *dalOrder) detectorAndInserterOrderItems(tx *sqlx.Tx, ord *models.Order
 			}
 		}
 	}
+	// максимальна клиенттің қатесін басты проритетке аламыз
 	if wasError {
-		if wasNotEnough {
-			return models.ErrOrderNotEnoughItems // 424
+		if foundAllergen {
+			return models.ErrAllergen // 418 (joke)
+		} else if notFound {
+			return models.ErrNotFoundItems // 404
 		}
-		return models.ErrNotFoundItems // 404
+		return models.ErrOrderNotEnoughItems // 424
 	}
 
 	const queryTransaction string = `

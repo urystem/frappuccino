@@ -11,8 +11,9 @@ var (
 	ErrBadInputItems       = errors.Join(ErrBadInput, errors.New("items invalid"))   // 400
 	ErrNotFoundItems       = errors.Join(ErrNotFound, errors.New("items not found")) // 404 //for menu ings and product items
 	ErrOrderNotEnoughItems = errors.New("items not enough")                          // 500 used for not enough invents for order
-	ErrOrderStatusClosed   = errors.New("order is already closed")
-	ErrOrdersMultiStatus   = errors.New("orders multi accepted")
+	ErrOrderStatusClosed   = errors.New("order is already closed")                   // 400
+	ErrOrdersMultiStatus   = errors.New("orders multi accepted")                     // 207
+	ErrAllergen            = errors.New("found allergen")                            // 418 (unused)
 )
 
 // 200 OK

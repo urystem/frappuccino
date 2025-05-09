@@ -19,11 +19,12 @@ type Order struct {
 }
 
 type OrderItem struct {
-	Warning       string     `json:"error,omitempty"`
-	OrderId       uint64     `json:"-" db:"order_id"`
-	ProductID     uint64     `json:"product_id" db:"product_id"`
-	Quantity      uint64     `json:"quantity" db:"quantity"`
-	NotEnoungIngs []struct { // қарау керек: егер 2 orderItem де бірдей Inventory болса жетіспейтіндері NotEnough әртүрлі болады
+	Warning       string         `json:"error,omitempty"`
+	// OrderId       uint64         `json:"-" db:"order_id"`
+	ProductID     uint64         `json:"product_id" db:"product_id"`
+	Quantity      uint64         `json:"quantity,omitempty" db:"quantity"`
+	Allergens     pq.StringArray `json:"allergens,omitempty" db:"allergens"`
+	NotEnoungIngs []struct {     // қарау керек: егер 2 orderItem де бірдей Inventory болса жетіспейтіндері NotEnough әртүрлі болады
 		Inventory_id   uint64  `json:"ingredient_id" db:"id"`
 		Inventory_name string  `json:"inventory_name" db:"name"`
 		NotEnough      float64 `json:"not_enough" db:"not_enough"`

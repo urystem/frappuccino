@@ -117,13 +117,18 @@ func (h *ordHandToService) PostOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if errors.Is(err, models.ErrOrderNotEnoughItems) {
-		bodyJsonStruct(w, orderStruct.Items, http.StatusFailedDependency)
+	if errors.Is(err, models.ErrAllergen) {
+		bodyJsonStruct(w, orderStruct.Items, http.StatusTeapot)
 		return
 	}
 
 	if errors.Is(err, models.ErrNotFoundItems) {
 		bodyJsonStruct(w, orderStruct.Items, http.StatusNotFound)
+		return
+	}
+
+	if errors.Is(err, models.ErrOrderNotEnoughItems) {
+		bodyJsonStruct(w, orderStruct.Items, http.StatusFailedDependency)
 		return
 	}
 
@@ -227,10 +232,12 @@ func (h *ordHandToService) BatchProcess(w http.ResponseWriter, r *http.Request) 
 			code = http.StatusMultiStatus // 207
 		} else if errors.Is(err, models.ErrBadInput) {
 			code = http.StatusUnprocessableEntity // 422
-		} else if errors.Is(err, models.ErrOrderNotEnoughItems) {
-			code = http.StatusFailedDependency // 424
+		} else if errors.Is(err, models.ErrAllergen) {
+			code = http.StatusTeapot // 418
 		} else if errors.Is(err, models.ErrNotFoundItems) {
 			code = http.StatusNotFound // 404
+		} else if errors.Is(err, models.ErrOrderNotEnoughItems) {
+			code = http.StatusFailedDependency // 424
 		} else {
 			code = http.StatusInternalServerError // 500
 		}
